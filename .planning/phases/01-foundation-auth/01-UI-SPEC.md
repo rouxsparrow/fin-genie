@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: neobrutalism (amber)
 created: 2026-04-06
+revised: 2026-04-06
 ---
 
 # Phase 1 — UI Design Contract
@@ -36,7 +37,7 @@ Declared values (multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, inline padding, tight element spacing |
-| sm | 8px | Compact element spacing, button padding vertical |
+| sm | 8px | Compact element spacing, button padding vertical, sidebar nav icon-to-label gap |
 | md | 16px | Default element spacing, card padding, input padding |
 | lg | 24px | Section padding, sidebar item spacing |
 | xl | 32px | Layout gaps between major sections |
@@ -55,10 +56,12 @@ Font: **DM Sans** — loaded via `next/font/google` with `display: swap`, `subse
 |------|------|--------|-------------|-------|
 | Body | 16px | 500 (medium) | 1.5 | Paragraphs, descriptions, table cells, form labels |
 | Label | 14px | 500 (medium) | 1.4 | Input labels, sidebar items, badges, metadata |
-| Heading | 24px | 700 (bold) | 1.2 | Page titles, card headings, section headers |
+| Heading | 24px | 700 (bold) | 1.2 | Page titles, card headings, section headers (e.g., "Household Members") |
 | Display | 32px | 700 (bold) | 1.1 | Login page title ("Fin Genie"), dashboard hero text |
 
 **Weight constraint:** Only 500 (medium) and 700 (bold) are used. Neo Brutalism `--heading-font-weight: 700` and `--base-font-weight: 500` are locked by the theme.
+
+**Size constraint:** Exactly 4 sizes (14, 16, 24, 32). Section headings and page headings both use 24px/700 and are differentiated by context: page headings appear at the top of the content area, section headings appear within cards or subsections below the page heading.
 
 ---
 
@@ -74,13 +77,13 @@ All colors use oklch values from the Neo Brutalism amber theme. CSS custom prope
 | Foreground | `--foreground` | `oklch(0% 0 0)` | #000000 | Body text, headings, icons |
 | Border | `--border` | `oklch(0% 0 0)` | #000000 | All borders (2px solid), box shadows |
 | Overlay | `--overlay` | `oklch(0% 0 0 / 0.8)` | #000000cc | Mobile drawer backdrop, dialog backdrop |
-| Destructive | n/a (inline) | — | #ef4444 | Remove user button, destructive confirmations only |
+| Destructive | n/a (inline) | — | #ef4444 | Remove Member button, destructive confirmations only |
 
 ### Accent Reserved For
 
 The amber accent (`--main`) is used exclusively on these elements:
 
-1. **Primary action buttons** — Login button, Add User button, Save Settings button
+1. **Primary action buttons** — Login button, Add Member button, Save Settings button
 2. **Active sidebar item** — background fill on the currently selected nav item
 3. **Role badge (Admin)** — small badge in sidebar footer and user management table
 4. **Toast success indicator** — left border accent on success toasts
@@ -124,19 +127,24 @@ Components needed from the neobrutalism registry for this phase:
 
 | Component | Registry Source | Usage |
 |-----------|----------------|-------|
-| Button | `@neobrutalism/button` | Login, Add User, Save, Remove, Retry |
+| Button | `@neobrutalism/button` | Login, Add Member, Save, Remove Member, Retry |
 | Card | `@neobrutalism/card` | Login card, empty state cards, error page card |
 | Input | `@neobrutalism/input` | Email, password, full name fields |
 | Label | `@neobrutalism/label` | Form field labels |
 | Select | `@neobrutalism/select` | Role selection (Admin/Viewer) |
 | Table | `@neobrutalism/table` | User management list |
-| Dialog | `@neobrutalism/dialog` | Remove user confirmation, coming soon message |
+| Dialog | `@neobrutalism/dialog` | Remove Member confirmation, coming soon message |
 | Badge | `@neobrutalism/badge` | Role badges (Admin/Viewer), status indicators |
 | Tooltip | `@neobrutalism/tooltip` | Greyed-out sidebar "coming soon" tooltips |
-| Separator | `@neobrutalism/separator` | Sidebar section dividers |
 | Skeleton | `@neobrutalism/skeleton` | Loading placeholder shapes |
 | Sonner (Toast) | `@neobrutalism/sonner` | Action feedback notifications |
 | Sheet | `@neobrutalism/sheet` | Mobile sidebar drawer |
+
+Components from shadcn official (not neobrutalism registry):
+
+| Component | Registry Source | Usage |
+|-----------|----------------|-------|
+| Separator | `shadcn/separator` | Sidebar section dividers (not available in neobrutalism registry) |
 
 **Custom components (not from registry):**
 
@@ -159,7 +167,7 @@ Components needed from the neobrutalism registry for this phase:
 - Full viewport height, centered vertically and horizontally
 - Warm cream background (`--background`)
 - Single card (480px max-width) with 2px black border and 4px hard shadow
-- Card content: "Fin Genie" display text (32px/700), 24px gap, email input, 16px gap, password input, 16px gap, login button (full width, amber accent), 16px gap, "Forgot password?" text link (14px, underline)
+- Card content: "Fin Genie" display text (32px/700), 24px gap, email input, 16px gap, password input, 16px gap, login button (full width, amber accent), 16px gap, "Forgot your password?" text link (14px, underline)
 - Error message appears below the login button as red text (16px), not a toast
 - No visible sign-up link (admin-only creation per D-12)
 
@@ -170,7 +178,7 @@ Components needed from the neobrutalism registry for this phase:
 - Content area: fills remaining viewport width, `--background` surface, 32px padding on desktop, 16px on mobile
 - Sidebar header: "Fin Genie" in 24px/700 bold, 24px padding
 - Sidebar nav: vertical list of items with 8px vertical gap between items
-- Each nav item: 44px height, 16px horizontal padding, 14px/500 text, lucide icon (20px) + 12px gap + label
+- Each nav item: 44px height, 16px horizontal padding, 14px/500 text, lucide icon (20px) + 8px gap + label
 - Active item: amber (`--main`) background, black text, black border-2, hard shadow
 - Disabled items: 50% opacity, cursor-not-allowed, still clickable (shows tooltip)
 - Sidebar footer: 16px padding, top border separator, avatar initials circle (36px, amber bg, black border), full name (14px/700), role badge, logout button (ghost style, 14px)
@@ -201,11 +209,11 @@ Components needed from the neobrutalism registry for this phase:
 ### Settings Page (`/settings`, admin only)
 
 - Page heading: "Settings" (24px/700)
-- Section heading: "Household Members" (20px/700), with "Add Member" button (amber accent) aligned right
+- Section heading: "Household Members" (24px/700), with "Add Member" button (amber accent) aligned right. Section headings are distinguished from the page heading by context -- they appear within a content section below the page heading, not at the top of the content area.
 - User table with columns: Name (14px/700), Email (14px/500), Role (badge), Actions
 - Table rows: 2px border, alternating subtle background (every other row gets `--background` tint)
 - Role badge: "Admin" (amber bg, black text, black border), "Viewer" (white bg, black text, black border)
-- Actions column: "Remove" button (destructive variant, red text on hover)
+- Actions column: "Remove Member" button (destructive variant, red text on hover)
 - "Add Member" dialog: title "Add Household Member", fields (email, full name, role select), "Create Account" button
 - Empty table state: "No other members yet. Add someone to share your spending data."
 
@@ -234,6 +242,7 @@ Components needed from the neobrutalism registry for this phase:
 | Error page heading | "Something went wrong" |
 | Error page body | "We hit an unexpected error. Try refreshing, or head back to the dashboard." |
 | Coming soon tooltip | "Available in the next update" |
+| Remove user button | "Remove Member" |
 | Remove user confirmation | "Remove {name}": "This will permanently remove {name} from the household. They will no longer be able to log in." |
 | Last admin warning | "You are the only admin. Add another admin before removing yourself." |
 | Toast: user created | "Account created. {name} will receive a login email." |
@@ -328,10 +337,38 @@ All skeletons use 2px black border with Neo Brutalism styling. Pulse animation (
 
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
-| shadcn official | button, card, input, label, select, table, dialog, badge, tooltip, separator, skeleton, sonner, sheet | not required |
-| neobrutalism.dev (`@neobrutalism/*`) | button, card, input, label, select, table, dialog, badge, tooltip, separator, skeleton, sonner, sheet | third-party — vetting required at execution time |
+| shadcn official | separator | not required |
+| neobrutalism.dev (`@neobrutalism/*`) | button, card, input, label, select, table, dialog, badge, tooltip, skeleton, sonner, sheet | view passed -- no flags -- 2026-04-06 |
 
-**Registry vetting note:** The `@neobrutalism/*` components are installed via the shadcn CLI (`npx shadcn add @neobrutalism/<component>`). Each component must be vetted with `npx shadcn view @neobrutalism/<component>` before installation during execution. The executor must scan for `fetch(`, `eval(`, `process.env`, dynamic imports from external URLs, and obfuscated code. If any flags are found, the developer must review and approve before the component enters the codebase.
+### Vetting Details (performed 2026-04-06)
+
+Each of the 12 `@neobrutalism/*` blocks was inspected via `npx shadcn view @neobrutalism/<component>`. The source code of every block was scanned for:
+- `fetch(`, `XMLHttpRequest`, `navigator.sendBeacon` (network access)
+- `process.env` (environment variable access)
+- `eval(`, `Function(`, `new Function` (dynamic code execution)
+- Dynamic imports from external URLs
+- Obfuscated variable names
+
+**Results per component:**
+
+| Block | Flags Found | Dependencies | Result |
+|-------|------------|--------------|--------|
+| `@neobrutalism/button` | None | `@radix-ui/react-slot`, `class-variance-authority` | PASS |
+| `@neobrutalism/card` | None | None (only `cn` utility) | PASS |
+| `@neobrutalism/input` | None | None (only `cn` utility) | PASS |
+| `@neobrutalism/label` | None | `@radix-ui/react-label` | PASS |
+| `@neobrutalism/select` | None | `@radix-ui/react-select`, `lucide-react` | PASS |
+| `@neobrutalism/table` | None | None (only `cn` utility) | PASS |
+| `@neobrutalism/dialog` | None | `@radix-ui/react-dialog`, `lucide-react` | PASS |
+| `@neobrutalism/badge` | None | `@radix-ui/react-slot`, `class-variance-authority` | PASS |
+| `@neobrutalism/tooltip` | None | `@radix-ui/react-tooltip` | PASS |
+| `@neobrutalism/skeleton` | None | None (only `cn` utility) | PASS |
+| `@neobrutalism/sonner` | None | `sonner`, `next-themes` | PASS |
+| `@neobrutalism/sheet` | None | `@radix-ui/react-dialog`, `lucide-react` | PASS |
+
+**Note on `@neobrutalism/separator`:** This block does not exist in the neobrutalism registry (returns 404). Use the standard `shadcn/separator` component instead. It is listed under the shadcn official registry row above.
+
+**Note on `@neobrutalism/sonner`:** This component imports `useTheme` from `next-themes`. Since this project is light-mode only (D-20), the executor should hardcode the theme to `"light"` or remove the `next-themes` dependency and pass `theme="light"` directly to the Sonner component.
 
 ---
 
