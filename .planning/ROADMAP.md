@@ -29,12 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Admin can create and remove household member accounts from a settings page
   4. User session persists across browser refresh without re-login
   5. App displays a sidebar navigation layout with Neo Brutalism styling that works on both desktop and mobile
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Project scaffold, Neo Brutalism theme, Supabase schema with RLS, auth utilities
+- [ ] 01-02-PLAN.md — Login page with Supabase Auth, app shell with sidebar navigation and responsive drawer
+- [ ] 01-03-PLAN.md — Dashboard empty state, settings page with user management, error pages
 **UI hint**: yes
 
 ### Phase 2: PDF Import Pipeline
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Auth | 0/3 | Not started | - |
+| 1. Foundation & Auth | 0/3 | Planned | - |
 | 2. PDF Import Pipeline | 0/3 | Not started | - |
 | 3. Categorization Engine | 0/3 | Not started | - |
 | 4. Dashboard & Analytics | 0/2 | Not started | - |
