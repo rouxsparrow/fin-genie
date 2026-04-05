@@ -1,92 +1,164 @@
 export type UserRole = 'admin' | 'viewer';
 export type MatchType = 'substring' | 'regex';
 
-export interface Profile {
-  id: string;
-  household_id: string;
-  full_name: string;
-  email: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Category {
-  id: string;
-  household_id: string;
-  name: string;
-  is_system: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Rule {
-  id: string;
-  household_id: string;
-  category_id: string;
-  pattern: string;
-  match_type: MatchType;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Import {
-  id: string;
-  household_id: string;
-  file_name: string;
-  statement_period_start: string | null;
-  statement_period_end: string | null;
-  transaction_count: number;
-  imported_by: string;
-  created_at: string;
-}
-
-export interface Transaction {
-  id: string;
-  household_id: string;
-  import_id: string;
-  category_id: string | null;
-  transaction_date: string;
-  description: string;
-  amount_cents: number;
-  is_debit: boolean;
-  transaction_hash: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Supabase Database type helper
+// Supabase Database type
+// Row types are defined inline (not via interface reference) because
+// @supabase/supabase-js generic resolution requires plain object types
+// that pass the `extends GenericSchema` conditional check.
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: Profile;
-        Insert: Omit<Profile, 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>;
+        Row: {
+          id: string;
+          household_id: string;
+          full_name: string;
+          email: string;
+          role: UserRole;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          household_id: string;
+          full_name: string;
+          email: string;
+          role: UserRole;
+        };
+        Update: {
+          household_id?: string;
+          full_name?: string;
+          email?: string;
+          role?: UserRole;
+        };
+        Relationships: [];
       };
       categories: {
-        Row: Category;
-        Insert: Omit<Category, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Category, 'id' | 'created_at' | 'updated_at'>>;
+        Row: {
+          id: string;
+          household_id: string;
+          name: string;
+          is_system: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          household_id: string;
+          name: string;
+          is_system: boolean;
+        };
+        Update: {
+          household_id?: string;
+          name?: string;
+          is_system?: boolean;
+        };
+        Relationships: [];
       };
       rules: {
-        Row: Rule;
-        Insert: Omit<Rule, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at'>>;
+        Row: {
+          id: string;
+          household_id: string;
+          category_id: string;
+          pattern: string;
+          match_type: MatchType;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          household_id: string;
+          category_id: string;
+          pattern: string;
+          match_type: MatchType;
+          sort_order: number;
+        };
+        Update: {
+          household_id?: string;
+          category_id?: string;
+          pattern?: string;
+          match_type?: MatchType;
+          sort_order?: number;
+        };
+        Relationships: [];
       };
       imports: {
-        Row: Import;
-        Insert: Omit<Import, 'id' | 'created_at'>;
-        Update: Partial<Omit<Import, 'id' | 'created_at'>>;
+        Row: {
+          id: string;
+          household_id: string;
+          file_name: string;
+          statement_period_start: string | null;
+          statement_period_end: string | null;
+          transaction_count: number;
+          imported_by: string;
+          created_at: string;
+        };
+        Insert: {
+          household_id: string;
+          file_name: string;
+          statement_period_start?: string | null;
+          statement_period_end?: string | null;
+          transaction_count: number;
+          imported_by: string;
+        };
+        Update: {
+          household_id?: string;
+          file_name?: string;
+          statement_period_start?: string | null;
+          statement_period_end?: string | null;
+          transaction_count?: number;
+          imported_by?: string;
+        };
+        Relationships: [];
       };
       transactions: {
-        Row: Transaction;
-        Insert: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<
-          Omit<Transaction, 'id' | 'created_at' | 'updated_at'>
-        >;
+        Row: {
+          id: string;
+          household_id: string;
+          import_id: string;
+          category_id: string | null;
+          transaction_date: string;
+          description: string;
+          amount_cents: number;
+          is_debit: boolean;
+          transaction_hash: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          household_id: string;
+          import_id: string;
+          category_id?: string | null;
+          transaction_date: string;
+          description: string;
+          amount_cents: number;
+          is_debit: boolean;
+          transaction_hash: string;
+        };
+        Update: {
+          household_id?: string;
+          import_id?: string;
+          category_id?: string | null;
+          transaction_date?: string;
+          description?: string;
+          amount_cents?: number;
+          is_debit?: boolean;
+          transaction_hash?: string;
+        };
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
     };
   };
 }
+
+// Convenience type aliases derived from Database
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Category = Database['public']['Tables']['categories']['Row'];
+export type Rule = Database['public']['Tables']['rules']['Row'];
+export type Import = Database['public']['Tables']['imports']['Row'];
+export type Transaction = Database['public']['Tables']['transactions']['Row'];
