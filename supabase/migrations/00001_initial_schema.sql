@@ -1,5 +1,4 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Use gen_random_uuid() (built into Postgres 13+, available on Supabase by default)
 
 -- Updated_at trigger function (reused across all tables)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -39,7 +38,8 @@ CREATE POLICY "Users can view household profiles"
   ON profiles FOR SELECT
   TO authenticated
   USING (
-    household_id = (
+    id = auth.uid()
+    OR household_id = (
       SELECT p.household_id FROM profiles p WHERE p.id = auth.uid()
     )
   );
@@ -81,7 +81,7 @@ CREATE POLICY "Admins can delete profiles"
 -- Categories table (per D-26, D-25, D-29, INFR-01)
 -- =============================================================================
 CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
   name TEXT NOT NULL,
   is_system BOOLEAN NOT NULL DEFAULT FALSE,
@@ -121,7 +121,7 @@ CREATE POLICY "Admins can manage categories"
 -- Rules table (per D-26, D-25, D-29)
 -- =============================================================================
 CREATE TABLE rules (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
   pattern TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE POLICY "Admins can manage rules"
 -- Imports table (per D-26, D-25, D-29)
 -- =============================================================================
 CREATE TABLE imports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
   file_name TEXT NOT NULL,
   statement_period_start DATE,
@@ -201,7 +201,7 @@ CREATE POLICY "Admins can create imports"
 -- Transactions table (per D-26, D-25, D-29, INFR-01)
 -- =============================================================================
 CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
   import_id UUID NOT NULL REFERENCES imports(id) ON DELETE CASCADE,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
