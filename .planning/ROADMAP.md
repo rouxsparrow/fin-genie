@@ -32,9 +32,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold, Neo Brutalism theme, Supabase schema with RLS, auth utilities
-- [ ] 01-02-PLAN.md — Login page with Supabase Auth, app shell with sidebar navigation and responsive drawer
-- [ ] 01-03-PLAN.md — Dashboard empty state, settings page with user management, error pages
+- [x] 01-01-PLAN.md — Project scaffold, Neo Brutalism theme, Supabase schema with RLS, auth utilities
+- [x] 01-02-PLAN.md — Login page with Supabase Auth, app shell with sidebar navigation and responsive drawer
+- [x] 01-03-PLAN.md — Dashboard empty state, settings page with user management, error pages
 **UI hint**: yes
 
 ### Phase 2: PDF Import Pipeline
