@@ -47,12 +47,13 @@ Plans:
   3. Review screen displays parsed transactions split into categorized (top) and uncategorized (bottom) sections
   4. Re-uploading an already-imported statement is detected and blocked via transaction hash matching
   5. Import history page shows which statements were imported, when, and how many transactions each contained, with statement period gap highlighting
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Schema + parser core: bank_configs migration, config-driven parser with TDD, hash utility, install dependencies
+- [ ] 02-02-PLAN.md — Upload flow + review screen: server actions, import page with 5-state UI, all review components
+- [ ] 02-03-PLAN.md — Import history + timeline: history page with table, timeline bar visualization, enable sidebar nav
+- [ ] 02-04-PLAN.md — Bank config viewer + schema push: read-only config page, push migration to live Supabase
 **UI hint**: yes
 
 ### Phase 3: Categorization Engine
@@ -98,6 +99,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Auth | 0/3 | Planned | - |
-| 2. PDF Import Pipeline | 0/3 | Not started | - |
+| 2. PDF Import Pipeline | 0/4 | Planned | - |
 | 3. Categorization Engine | 0/3 | Not started | - |
 | 4. Dashboard & Analytics | 0/2 | Not started | - |
