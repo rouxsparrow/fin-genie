@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
-import {
-  PopoverContent,
-} from '@/components/ui/popover';
+// PopoverContent no longer used — parent handles positioning
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -158,14 +156,6 @@ export function RuleCreationPopover({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <PopoverContent
-      side="bottom"
-      sideOffset={4}
-      align="start"
-      collisionPadding={16}
-      className="w-[calc(100vw-32px)] p-4 md:w-80"
-      aria-label={`Create categorization rule for ${description}`}
-    >
       <div className="flex flex-col gap-3">
         {/* Field 1: Pattern */}
         <div className="flex flex-col gap-1">
@@ -333,6 +323,5 @@ export function RuleCreationPopover({
           </Button>
         </div>
       </div>
-    </PopoverContent>
   );
 }

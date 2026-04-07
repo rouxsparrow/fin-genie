@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { AlertTriangle, Lock } from 'lucide-react';
 import {
@@ -11,10 +12,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  Popover,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { RuleCreationPopover } from '@/components/rules/rule-creation-popover';
 import { TransactionCard } from '@/components/import/transaction-card';
 import { cn } from '@/lib/utils';
@@ -43,6 +40,98 @@ function formatCurrency(amountCents: number, isDebit: boolean): string {
   return isDebit ? formatted : `(${formatted})`;
 }
 
+/**
+ * Floating popover panel that positions itself below a target row.
+ * Rendered OUTSIDE the table to avoid invalid DOM nesting.
+ */
+function FloatingPopover({
+  targetRef,
+  transaction,
+  categories,
+  onRuleCreated,
+  onCategoryCreated,
+  open,
+  onOpenChange,
+}: {
+  targetRef: React.RefObject<HTMLElement | null>;
+  transaction: ParsedTransaction;
+  categories: Category[];
+  onRuleCreated: (rule: Rule) => void;
+  onCategoryCreated: (cat: Category) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+
+  useEffect(() => {
+    if (open && targetRef.current) {
+      const rect = targetRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [open, targetRef]);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node) &&
+        targetRef.current &&
+        !targetRef.current.contains(e.target as Node)
+      ) {
+        onOpenChange(false);
+      }
+    }
+    // Use a timeout so the opening click doesn't immediately close
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [open, onOpenChange, targetRef]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onOpenChange(false);
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, onOpenChange]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute z-50 w-[calc(100vw-32px)] md:w-80 rounded-base border-2 border-border bg-secondary-background p-4 text-foreground shadow-shadow"
+      style={{ top: position.top, left: position.left }}
+      role="dialog"
+      aria-label={`Create categorization rule for ${transaction.description}`}
+    >
+      <RuleCreationPopover
+        description={transaction.description}
+        categories={categories}
+        onRuleCreated={onRuleCreated}
+        onCategoryCreated={onCategoryCreated}
+        open={open}
+        onOpenChange={onOpenChange}
+      />
+    </div>
+  );
+}
+
 export function TransactionTable({
   transactions,
   duplicateHashes,
@@ -55,14 +144,26 @@ export function TransactionTable({
   onRuleCreated,
   onCategoryCreated,
 }: TransactionTableProps) {
+  const rowRefs = useRef<Map<string, HTMLElement>>(new Map());
+
   if (transactions.length === 0) {
     return null;
   }
 
   const isUncategorizedSection = section === 'uncategorized';
+  const canShowPopover =
+    isUncategorizedSection &&
+    !!categories &&
+    !!onRuleCreated &&
+    !!onCategoryCreated;
+
+  // Find the active transaction for the popover
+  const activeTransaction = openPopoverHash
+    ? transactions.find((t) => t.hash === openPopoverHash)
+    : null;
 
   return (
-    <>
+    <div className="relative">
       {/* Desktop table */}
       <div className="hidden md:block">
         <Table>
@@ -84,51 +185,42 @@ export function TransactionTable({
                 ? categoryLookup?.get(categoryId)
                 : undefined;
               const isPopoverOpen = openPopoverHash === tx.hash;
+              const isClickable =
+                isUncategorizedSection && !isDuplicate && canShowPopover;
 
-              const rowContent = (
+              return (
                 <TableRow
                   key={tx.hash}
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(tx.hash, el);
+                    else rowRefs.current.delete(tx.hash);
+                  }}
                   className={cn(
                     'h-12',
                     index % 2 === 0
                       ? 'bg-secondary-background'
                       : 'bg-background',
                     isDuplicate && 'opacity-50 hover:bg-transparent',
-                    isUncategorizedSection &&
-                      !isDuplicate &&
-                      'cursor-pointer hover:bg-background',
-                    isPopoverOpen && 'border-l-2 border-l-main',
+                    isClickable && 'cursor-pointer hover:bg-background',
+                    isPopoverOpen && 'border-l-2 border-l-main bg-background',
                   )}
                   aria-disabled={isDuplicate || undefined}
-                  role={
-                    isUncategorizedSection && !isDuplicate
-                      ? 'button'
-                      : undefined
-                  }
-                  tabIndex={
-                    isUncategorizedSection && !isDuplicate ? 0 : undefined
-                  }
-                  aria-haspopup={
-                    isUncategorizedSection && !isDuplicate
-                      ? 'dialog'
-                      : undefined
-                  }
-                  aria-expanded={
-                    isUncategorizedSection && !isDuplicate
-                      ? isPopoverOpen
-                      : undefined
-                  }
+                  role={isClickable ? 'button' : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
+                  aria-haspopup={isClickable ? 'dialog' : undefined}
+                  aria-expanded={isClickable ? isPopoverOpen : undefined}
                   onClick={
-                    isUncategorizedSection && !isDuplicate
-                      ? () => onOpenPopover?.(tx.hash)
+                    isClickable
+                      ? () =>
+                          onOpenPopover?.(isPopoverOpen ? null : tx.hash)
                       : undefined
                   }
                   onKeyDown={
-                    isUncategorizedSection && !isDuplicate
+                    isClickable
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onOpenPopover?.(tx.hash);
+                            onOpenPopover?.(isPopoverOpen ? null : tx.hash);
                           }
                         }
                       : undefined
@@ -171,9 +263,7 @@ export function TransactionTable({
                   >
                     {category ? (
                       <Badge
-                        variant={
-                          category.is_system ? 'neutral' : 'default'
-                        }
+                        variant={category.is_system ? 'neutral' : 'default'}
                       >
                         {category.is_system && (
                           <Lock className="h-3 w-3" />
@@ -188,69 +278,6 @@ export function TransactionTable({
                   </TableCell>
                 </TableRow>
               );
-
-              // Wrap uncategorized rows with Popover
-              if (
-                isUncategorizedSection &&
-                !isDuplicate &&
-                categories &&
-                onRuleCreated &&
-                onCategoryCreated
-              ) {
-                return (
-                  <Popover
-                    key={tx.hash}
-                    open={isPopoverOpen}
-                    onOpenChange={(open: boolean) =>
-                      onOpenPopover?.(open ? tx.hash : null)
-                    }
-                  >
-                    <PopoverTrigger asChild>
-                      <tr
-                        className={cn(
-                          'h-12 border-b border-border',
-                          index % 2 === 0
-                            ? 'bg-secondary-background'
-                            : 'bg-background',
-                          'cursor-pointer hover:bg-background',
-                          isPopoverOpen && 'border-l-2 border-l-main',
-                        )}
-                        role="button"
-                        tabIndex={0}
-                        aria-haspopup="dialog"
-                        aria-expanded={isPopoverOpen}
-                      >
-                        <TableCell className="text-sm font-medium">
-                          {format(parseISO(tx.date), 'd MMM yyyy')}
-                        </TableCell>
-                        <TableCell className="max-w-[300px] truncate text-sm font-medium">
-                          {tx.description}
-                        </TableCell>
-                        <TableCell className="text-right text-sm font-medium tabular-nums">
-                          {formatCurrency(tx.amountCents, tx.isDebit)}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          <span className="text-sm font-medium opacity-40">
-                            --
-                          </span>
-                        </TableCell>
-                      </tr>
-                    </PopoverTrigger>
-                    <RuleCreationPopover
-                      description={tx.description}
-                      categories={categories}
-                      onRuleCreated={onRuleCreated}
-                      onCategoryCreated={onCategoryCreated}
-                      open={isPopoverOpen}
-                      onOpenChange={(open) =>
-                        onOpenPopover?.(open ? tx.hash : null)
-                      }
-                    />
-                  </Popover>
-                );
-              }
-
-              return rowContent;
             })}
           </TableBody>
         </Table>
@@ -265,57 +292,47 @@ export function TransactionTable({
             ? categoryLookup?.get(categoryId)
             : undefined;
           const isPopoverOpen = openPopoverHash === tx.hash;
+          const isClickable =
+            isUncategorizedSection && !isDuplicate && canShowPopover;
 
-          const card = (
-            <TransactionCard
+          return (
+            <div
               key={tx.hash}
-              transaction={tx}
-              isDuplicate={isDuplicate}
-              categoryName={category?.name}
-              isSystemCategory={category?.is_system}
-              isUncategorized={isUncategorizedSection && !isDuplicate}
-              onTap={
-                isUncategorizedSection && !isDuplicate
-                  ? () => onOpenPopover?.(tx.hash)
-                  : undefined
-              }
-            />
-          );
-
-          // Wrap uncategorized cards with Popover
-          if (
-            isUncategorizedSection &&
-            !isDuplicate &&
-            categories &&
-            onRuleCreated &&
-            onCategoryCreated
-          ) {
-            return (
-              <Popover
-                key={tx.hash}
-                open={isPopoverOpen}
-                onOpenChange={(open: boolean) =>
-                  onOpenPopover?.(open ? tx.hash : null)
+              ref={(el) => {
+                if (el) rowRefs.current.set(tx.hash, el);
+                else rowRefs.current.delete(tx.hash);
+              }}
+            >
+              <TransactionCard
+                transaction={tx}
+                isDuplicate={isDuplicate}
+                categoryName={category?.name}
+                isSystemCategory={category?.is_system}
+                isUncategorized={isClickable}
+                onTap={
+                  isClickable
+                    ? () =>
+                        onOpenPopover?.(isPopoverOpen ? null : tx.hash)
+                    : undefined
                 }
-              >
-                <PopoverTrigger asChild>{card}</PopoverTrigger>
-                <RuleCreationPopover
-                  description={tx.description}
-                  categories={categories}
-                  onRuleCreated={onRuleCreated}
-                  onCategoryCreated={onCategoryCreated}
-                  open={isPopoverOpen}
-                  onOpenChange={(open) =>
-                    onOpenPopover?.(open ? tx.hash : null)
-                  }
-                />
-              </Popover>
-            );
-          }
-
-          return card;
+              />
+            </div>
+          );
         })}
       </div>
-    </>
+
+      {/* Floating popover — rendered OUTSIDE the table */}
+      {canShowPopover && activeTransaction && openPopoverHash && (
+        <FloatingPopover
+          targetRef={{ current: rowRefs.current.get(openPopoverHash) ?? null }}
+          transaction={activeTransaction}
+          categories={categories}
+          onRuleCreated={onRuleCreated}
+          onCategoryCreated={onCategoryCreated}
+          open={true}
+          onOpenChange={(open) => onOpenPopover?.(open ? openPopoverHash : null)}
+        />
+      )}
+    </div>
   );
 }
