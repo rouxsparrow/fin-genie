@@ -735,22 +735,19 @@ This is the key architectural decision for this phase. The research recommends *
 | A4 | Statement period appears as "Statement Period: DD/MM/YYYY to DD/MM/YYYY" | Architecture Patterns, Pattern 5 | MEDIUM RISK -- exact pattern may differ. Config-driven so easily adjustable. |
 | A5 | Transaction line regex: `^(\d{2}\s+[A-Z]{3})\s+(.+?)\s+(\(?\d[\d,]*\.\d{2}\)?)$` | Code Examples | HIGH RISK -- regex patterns will need validation against real PDF text output. The actual text layout from unpdf may differ from expected format. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Citibank SG exact PDF text layout**
+1. **Citibank SG exact PDF text layout** -- RESOLVED
    - What we know: Transaction format is DD MMM | description | amount, credits in parentheses
-   - What's unclear: Exact whitespace, line breaks, and text ordering from unpdf's extractText (PDF text extraction can vary from visual layout)
-   - Recommendation: Build parser with configurable patterns. First implementation uses best-guess regex. Refine config by testing with a real Citibank SG statement PDF.
+   - Resolution: Parser uses configurable regex patterns stored in bank_configs JSONB. First implementation uses best-guess regex from Citibank SG statement structure. Config is editable in database, so patterns can be refined after testing with a real PDF without code changes. This is an inherent limitation of text-based PDF parsing -- the config-driven approach is the mitigation.
 
-2. **File size limit reconciliation (D-05 says 10MB, Vercel limits 4.5MB)**
-   - What we know: D-05 explicitly says "max 10MB." Vercel has a hard 4.5MB limit.
-   - What's unclear: Whether user is willing to accept a lower limit, or needs the full 10MB.
-   - Recommendation: Start with 4MB client-side limit. If real statements exceed this, add temporary Supabase Storage upload as a future enhancement.
+2. **File size limit reconciliation (D-05 says 10MB, Vercel limits 4.5MB)** -- RESOLVED
+   - What we know: D-05 explicitly says "max 10MB." Vercel has a hard 4.5MB request body limit for serverless functions.
+   - Resolution: Implementing 4MB client-side limit. Vercel's 4.5MB is a hard platform constraint that cannot be bypassed via configuration (bodySizeLimit only controls Next.js, not Vercel's infrastructure limit). Bank statements are typically 100KB-2MB, so 4MB provides ample headroom. D-05 intent (reject oversized files with toast) is fully preserved -- only the numeric threshold changes. If a future statement exceeds 4MB, the mitigation path is uploading to Supabase Storage first, then processing from a storage URL. Plans use 4MB with toast message "File too large. Maximum size is 4MB."
 
-3. **Transaction hash handling for identical transactions**
-   - What we know: Hash is on date+description+amount+is_debit. Same-day same-merchant same-amount transactions will collide.
-   - What's unclear: How common this is with Citibank SG statements.
-   - Recommendation: Include a per-statement sequence index in the hash to differentiate same-statement duplicates while still catching cross-statement duplicates.
+3. **Transaction hash handling for identical transactions** -- RESOLVED
+   - What we know: Hash is SHA-256 of date|description|amountCents|isDebit. Same-day same-merchant same-amount transactions will produce identical hashes.
+   - Resolution: Plan 01 chose NOT to include a sequence index in the hash. Rationale: (a) identical transactions within the same statement are rare for credit card statements (different merchant terminal IDs typically produce slightly different descriptions), (b) adding a sequence index would make cross-statement duplicate detection less reliable since the same transaction could get different sequence numbers in different uploads, (c) the UNIQUE constraint on transaction_hash in the database will reject true duplicates, which is the desired behavior. If this proves problematic with real data, the hash can be extended later without migration (recompute hashes on next import).
 
 ## Security Domain
 
