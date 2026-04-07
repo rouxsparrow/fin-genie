@@ -1,5 +1,4 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, it, expect } from 'vitest';
 import { evaluateRules } from './evaluate-rules';
 import type { TransactionLike, RuleLike } from './evaluate-rules';
 
@@ -21,9 +20,9 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, rules);
 
-    assert.equal(result.get('tx1'), transportCatId);
-    assert.equal(result.get('tx3'), cardPaymentCatId);
-    assert.equal(result.has('tx2'), false);
+    expect(result.get('tx1')).toBe(transportCatId);
+    expect(result.get('tx3')).toBe(cardPaymentCatId);
+    expect(result.has('tx2')).toBe(false);
   });
 
   it('first-match-wins: earlier rule takes priority', () => {
@@ -37,7 +36,7 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, rules);
 
-    assert.equal(result.get('tx1'), transportCatId);
+    expect(result.get('tx1')).toBe(transportCatId);
   });
 
   it('substring match is case-insensitive', () => {
@@ -50,7 +49,7 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, rules);
 
-    assert.equal(result.get('tx1'), transportCatId);
+    expect(result.get('tx1')).toBe(transportCatId);
   });
 
   it('regex match works correctly', () => {
@@ -64,8 +63,8 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, rules);
 
-    assert.equal(result.get('tx1'), transportCatId);
-    assert.equal(result.has('tx2'), false);
+    expect(result.get('tx1')).toBe(transportCatId);
+    expect(result.has('tx2')).toBe(false);
   });
 
   it('invalid regex pattern never matches, does not throw', () => {
@@ -78,7 +77,7 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, rules);
 
-    assert.equal(result.size, 0);
+    expect(result.size).toBe(0);
   });
 
   it('empty transactions array returns empty Map', () => {
@@ -88,7 +87,7 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules([], rules);
 
-    assert.equal(result.size, 0);
+    expect(result.size).toBe(0);
   });
 
   it('empty rules array returns empty Map', () => {
@@ -98,6 +97,6 @@ describe('evaluateRules', () => {
 
     const result = evaluateRules(transactions, []);
 
-    assert.equal(result.size, 0);
+    expect(result.size).toBe(0);
   });
 });

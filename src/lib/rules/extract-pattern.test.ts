@@ -1,29 +1,28 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, it, expect } from 'vitest';
 import { extractPattern } from './extract-pattern';
 
 describe('extractPattern', () => {
   it('strips location suffix and returns first word: "GRAB TRANSPORT SINGAPORE SG"', () => {
-    assert.equal(extractPattern('GRAB TRANSPORT SINGAPORE SG'), 'GRAB');
+    expect(extractPattern('GRAB TRANSPORT SINGAPORE SG')).toBe('GRAB');
   });
 
   it('strips SINGAPORE suffix and returns first word: "NTUC FAIRPRICE SINGAPORE"', () => {
-    assert.equal(extractPattern('NTUC FAIRPRICE SINGAPORE'), 'NTUC');
+    expect(extractPattern('NTUC FAIRPRICE SINGAPORE')).toBe('NTUC');
   });
 
   it('strips card number suffix and returns first word: "SPOTIFY XXXX1234"', () => {
-    assert.equal(extractPattern('SPOTIFY XXXX1234'), 'SPOTIFY');
+    expect(extractPattern('SPOTIFY XXXX1234')).toBe('SPOTIFY');
   });
 
   it('returns first word for simple description: "PAYMENT RECEIVED"', () => {
-    assert.equal(extractPattern('PAYMENT RECEIVED'), 'PAYMENT');
+    expect(extractPattern('PAYMENT RECEIVED')).toBe('PAYMENT');
   });
 
   it('returns the single word when description is one word: "A"', () => {
-    assert.equal(extractPattern('A'), 'A');
+    expect(extractPattern('A')).toBe('A');
   });
 
   it('trims whitespace: "  GRAB  "', () => {
-    assert.equal(extractPattern('  GRAB  '), 'GRAB');
+    expect(extractPattern('  GRAB  ')).toBe('GRAB');
   });
 });
