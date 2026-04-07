@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { UserTable } from '@/components/user-table';
@@ -41,6 +42,17 @@ export default async function SettingsPage() {
       </div>
 
       <UserTable profiles={profiles ?? []} currentUserId={user.id} />
+
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">System</h2>
+        <Link
+          href="/settings/bank-configs"
+          className="inline-flex items-center gap-2 px-4 py-3 border-2 border-border bg-secondary-background font-bold hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none shadow-shadow transition-all"
+        >
+          Bank Configurations
+          <span className="text-muted-foreground font-normal">View configured bank statement formats</span>
+        </Link>
+      </div>
     </div>
   );
 }
