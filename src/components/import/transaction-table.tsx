@@ -201,7 +201,7 @@ export function TransactionTable({
                   <Popover
                     key={tx.hash}
                     open={isPopoverOpen}
-                    onOpenChange={(open) =>
+                    onOpenChange={(open: boolean) =>
                       onOpenPopover?.(open ? tx.hash : null)
                     }
                   >
@@ -264,7 +264,7 @@ export function TransactionTable({
               <Popover
                 key={tx.hash}
                 open={isPopoverOpen}
-                onOpenChange={(open) =>
+                onOpenChange={(open: boolean) =>
                   onOpenPopover?.(open ? tx.hash : null)
                 }
               >
