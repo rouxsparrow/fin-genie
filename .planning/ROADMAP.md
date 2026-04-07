@@ -50,10 +50,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Schema + parser core: bank_configs migration, config-driven parser with TDD, hash utility, install dependencies
-- [ ] 02-02-PLAN.md — Upload flow + review screen: server actions, import page with 5-state UI, all review components
-- [ ] 02-03-PLAN.md — Import history + timeline: history page with table, timeline bar visualization, enable sidebar nav
-- [ ] 02-04-PLAN.md — Bank config viewer + schema push: read-only config page, push migration to live Supabase
+- [x] 02-01-PLAN.md — Schema + parser core: bank_configs migration, config-driven parser with TDD, hash utility, install dependencies
+- [x] 02-02-PLAN.md — Upload flow + review screen: server actions, import page with 5-state UI, all review components
+- [x] 02-03-PLAN.md — Import history + timeline: history page with table, timeline bar visualization, enable sidebar nav
+- [x] 02-04-PLAN.md — Bank config viewer + schema push: read-only config page, push migration to live Supabase
 **UI hint**: yes
 
 ### Phase 3: Categorization Engine
