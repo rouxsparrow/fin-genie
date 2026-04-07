@@ -52,12 +52,11 @@ export default async function RulesPage() {
 
       <div className="h-6" />
 
-      {userRules.length === 0 && allRules.length <= 1 ? (
+      {allRules.length === 0 ? (
         <EmptyState
           icon={<ListFilter size={48} />}
           heading="No rules yet"
           body="Create your first rule to start categorizing transactions automatically."
-          ctaLabel="Add Rule"
         />
       ) : (
         <RulesTable
