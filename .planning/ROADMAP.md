@@ -69,10 +69,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Schema migration (is_system on rules, seed categories/rule), rule evaluation engine with TDD, server actions for rules and categories CRUD
-- [ ] 03-02-PLAN.md — Install Popover, rule creation popover, wire review screen with real evaluation, 100% categorization gate, import with category IDs
-- [ ] 03-03-PLAN.md — Rules management page with table/edit/reorder/delete/re-categorize, categories management page with inline editing, sidebar nav enablement
-- [ ] 03-04-PLAN.md — Schema push to live Supabase, end-to-end verification checkpoint
+- [x] 03-01-PLAN.md — Schema migration (is_system on rules, seed categories/rule), rule evaluation engine with TDD, server actions for rules and categories CRUD
+- [x] 03-02-PLAN.md — Install Popover, rule creation popover, wire review screen with real evaluation, 100% categorization gate, import with category IDs
+- [x] 03-03-PLAN.md — Rules management page with table/edit/reorder/delete/re-categorize, categories management page with inline editing, sidebar nav enablement
+- [x] 03-04-PLAN.md — Schema push to live Supabase, end-to-end verification checkpoint
 **UI hint**: yes
 
 ### Phase 4: Dashboard & Analytics
@@ -85,11 +85,12 @@ Plans:
   3. Monthly spending trend chart (bar/line) shows spending over time within the selected range
   4. Searchable, filterable transaction list with sortable columns displays all imported transactions
   5. Date range selector offers presets (this month, last 3 months, last year, custom) and updates all dashboard components
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Install dependencies (recharts, react-table, react-day-picker), analytics server actions, date range hook, DateRangeSelector and StatCard components
+- [ ] 04-02-PLAN.md — Dashboard page rewrite with donut chart, bar chart, recent transactions preview, category click-to-filter
+- [ ] 04-03-PLAN.md — Transactions page with TanStack Table, search, category filter, sort, pagination, mobile cards, sidebar nav enablement
 **UI hint**: yes
 
 ## Progress
@@ -102,4 +103,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Foundation & Auth | 0/3 | Planned | - |
 | 2. PDF Import Pipeline | 0/4 | Planned | - |
 | 3. Categorization Engine | 0/4 | Planned | - |
-| 4. Dashboard & Analytics | 0/2 | Not started | - |
+| 4. Dashboard & Analytics | 0/3 | Not started | - |
