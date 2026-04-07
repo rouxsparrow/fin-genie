@@ -1,5 +1,6 @@
 'use client';
 
+import { forwardRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { AlertTriangle, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,16 +26,20 @@ function formatCurrency(amountCents: number, isDebit: boolean): string {
   return isDebit ? formatted : `(${formatted})`;
 }
 
-export function TransactionCard({
-  transaction,
-  isDuplicate,
-  categoryName,
-  isSystemCategory,
-  isUncategorized,
-  onTap,
-}: TransactionCardProps) {
+export const TransactionCard = forwardRef<HTMLDivElement, TransactionCardProps & React.HTMLAttributes<HTMLDivElement>>(
+  function TransactionCard({
+    transaction,
+    isDuplicate,
+    categoryName,
+    isSystemCategory,
+    isUncategorized,
+    onTap,
+    ...rest
+  }, ref) {
   return (
     <Card
+      ref={ref}
+      {...rest}
       className={cn(
         isDuplicate && 'opacity-50',
         isUncategorized && 'cursor-pointer',
@@ -89,4 +94,4 @@ export function TransactionCard({
       </CardContent>
     </Card>
   );
-}
+});

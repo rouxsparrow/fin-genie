@@ -205,7 +205,37 @@ export function TransactionTable({
                       onOpenPopover?.(open ? tx.hash : null)
                     }
                   >
-                    <PopoverTrigger asChild>{rowContent}</PopoverTrigger>
+                    <PopoverTrigger asChild>
+                      <tr
+                        className={cn(
+                          'h-12 border-b border-border',
+                          index % 2 === 0
+                            ? 'bg-secondary-background'
+                            : 'bg-background',
+                          'cursor-pointer hover:bg-background',
+                          isPopoverOpen && 'border-l-2 border-l-main',
+                        )}
+                        role="button"
+                        tabIndex={0}
+                        aria-haspopup="dialog"
+                        aria-expanded={isPopoverOpen}
+                      >
+                        <TableCell className="text-sm font-medium">
+                          {format(parseISO(tx.date), 'd MMM yyyy')}
+                        </TableCell>
+                        <TableCell className="max-w-[300px] truncate text-sm font-medium">
+                          {tx.description}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium tabular-nums">
+                          {formatCurrency(tx.amountCents, tx.isDebit)}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <span className="text-sm font-medium opacity-40">
+                            --
+                          </span>
+                        </TableCell>
+                      </tr>
+                    </PopoverTrigger>
                     <RuleCreationPopover
                       description={tx.description}
                       categories={categories}
