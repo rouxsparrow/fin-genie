@@ -66,12 +66,13 @@ Plans:
   3. Admin can re-categorize transactions after editing rules without re-uploading the PDF
   4. Import button is disabled until all transactions are categorized (100% gate), and card payment transactions are auto-categorized and excluded from analytics
   5. Admin can manage rules (create, edit, reorder, delete) from a dedicated rules page and manage categories (create, edit, delete) with common categories pre-seeded
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Schema migration (is_system on rules, seed categories/rule), rule evaluation engine with TDD, server actions for rules and categories CRUD
+- [ ] 03-02-PLAN.md — Install Popover, rule creation popover, wire review screen with real evaluation, 100% categorization gate, import with category IDs
+- [ ] 03-03-PLAN.md — Rules management page with table/edit/reorder/delete/re-categorize, categories management page with inline editing, sidebar nav enablement
+- [ ] 03-04-PLAN.md — Schema push to live Supabase, end-to-end verification checkpoint
 **UI hint**: yes
 
 ### Phase 4: Dashboard & Analytics
@@ -100,5 +101,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Foundation & Auth | 0/3 | Planned | - |
 | 2. PDF Import Pipeline | 0/4 | Planned | - |
-| 3. Categorization Engine | 0/3 | Not started | - |
+| 3. Categorization Engine | 0/4 | Planned | - |
 | 4. Dashboard & Analytics | 0/2 | Not started | - |
