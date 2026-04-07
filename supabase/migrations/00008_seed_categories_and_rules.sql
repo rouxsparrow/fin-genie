@@ -1,0 +1,23 @@
+INSERT INTO categories (household_id, name, is_system) VALUES
+  ('00000000-0000-0000-0000-000000000000', 'Card Payment', TRUE),
+  ('00000000-0000-0000-0000-000000000000', 'Food & Dining', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Transport', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Shopping', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Groceries', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Utilities', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Healthcare', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Entertainment', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Education', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Subscriptions', FALSE),
+  ('00000000-0000-0000-0000-000000000000', 'Others', FALSE);
+
+INSERT INTO rules (household_id, category_id, pattern, match_type, sort_order, is_system)
+SELECT
+  '00000000-0000-0000-0000-000000000000',
+  c.id,
+  'PAYMENT',
+  'substring',
+  0,
+  TRUE
+FROM categories c
+WHERE c.name = 'Card Payment' AND c.household_id = '00000000-0000-0000-0000-000000000000';

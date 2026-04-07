@@ -62,6 +62,7 @@ export interface Database {
           pattern: string;
           match_type: MatchType;
           sort_order: number;
+          is_system: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -71,6 +72,7 @@ export interface Database {
           pattern: string;
           match_type: MatchType;
           sort_order: number;
+          is_system?: boolean;
         };
         Update: {
           household_id?: string;
@@ -78,6 +80,7 @@ export interface Database {
           pattern?: string;
           match_type?: MatchType;
           sort_order?: number;
+          is_system?: boolean;
         };
         Relationships: [];
       };
