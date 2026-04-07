@@ -88,7 +88,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Install dependencies (recharts, react-table, react-day-picker), analytics server actions, date range hook, DateRangeSelector and StatCard components
+- [x] 04-01-PLAN.md — Install dependencies (recharts, react-table, react-day-picker), analytics server actions, date range hook, DateRangeSelector and StatCard components
 - [ ] 04-02-PLAN.md — Dashboard page rewrite with donut chart, bar chart, recent transactions preview, category click-to-filter
 - [ ] 04-03-PLAN.md — Transactions page with TanStack Table, search, category filter, sort, pagination, mobile cards, sidebar nav enablement
 **UI hint**: yes

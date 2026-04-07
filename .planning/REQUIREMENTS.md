@@ -37,11 +37,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Analytics
 
-- [ ] **ANLC-01**: Dashboard shows spending summary total for selected date range
+- [x] **ANLC-01**: Dashboard shows spending summary total for selected date range
 - [ ] **ANLC-02**: Dashboard shows category breakdown chart (pie/donut with amounts and percentages)
 - [ ] **ANLC-03**: Dashboard shows spending trend over time as monthly bar or line chart
 - [ ] **ANLC-04**: Dashboard shows searchable and filterable transaction list with sortable columns
-- [ ] **ANLC-05**: Date range selection with presets (this month, last 3 months, last year, custom range)
+- [x] **ANLC-05**: Date range selection with presets (this month, last 3 months, last year, custom range)
 - [ ] **ANLC-06**: Viewer can access dashboard and transaction list in read-only mode
 
 ### Infrastructure
@@ -121,11 +121,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CATG-06 | Phase 3 | Pending |
 | CATG-07 | Phase 3 | Pending |
 | CATG-08 | Phase 3 | Pending |
-| ANLC-01 | Phase 4 | Pending |
+| ANLC-01 | Phase 4 | Complete |
 | ANLC-02 | Phase 4 | Pending |
 | ANLC-03 | Phase 4 | Pending |
 | ANLC-04 | Phase 4 | Pending |
-| ANLC-05 | Phase 4 | Pending |
+| ANLC-05 | Phase 4 | Complete |
 | ANLC-06 | Phase 4 | Pending |
 | INFR-01 | Phase 1 | Pending |
 | INFR-02 | Phase 1 | Pending |
