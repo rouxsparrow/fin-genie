@@ -292,7 +292,7 @@ The import bar at the bottom of the review screen is modified:
     - Category: Select dropdown (200px)
   - Action row below fields (flex, justify-end, 8px gap, 8px margin-top):
     - "Cancel" button (`variant="neutral"`)
-    - "Save" button (`variant="default"`, amber bg)
+    - "Save Rule" button (`variant="default"`, amber bg)
 - Only one row can be in edit mode at a time. Opening edit on another row auto-cancels the previous.
 
 **Delete Rule (D-12):**
@@ -577,6 +577,8 @@ Inherits all Phase 1 and Phase 2 accessibility contracts. Phase 3 additions:
 | Popover labeling | Popover container has `aria-label="Create categorization rule for {transaction description}"`. |
 | Match type toggle | Toggle buttons use `role="radiogroup"` with `role="radio"` and `aria-checked` on each option. Arrow keys navigate between options. |
 | Rules table reorder | After reorder, `aria-live="polite"` region announces "Rule moved to position {N}". |
+| Rule action buttons | Reorder buttons have `aria-label="Move rule up"` / `aria-label="Move rule down"`. Edit button has `aria-label="Edit rule"`. Delete button has `aria-label="Delete rule"`. |
+| Category action buttons | Edit button has `aria-label="Edit category"`. Delete button has `aria-label="Delete category"`. |
 | System rules | System rule rows have `aria-label="System rule: {pattern} -- cannot be edited or deleted"`. Disabled buttons have `aria-disabled="true"`. |
 | Category inline edit | Edit mode input has `aria-label="Edit category name"`. `aria-live="polite"` announces validation errors. |
 | Import gate tooltip | Disabled import button has `aria-describedby` pointing to text explaining why import is disabled. |
@@ -602,7 +604,7 @@ Both items remain admin-only. Viewers do not see Rules or Categories in their si
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | separator | not required |
-| neobrutalism.dev (`@neobrutalism/*`) | button, card, input, label, select, table, dialog, badge, tooltip, skeleton, sonner, sheet (Phase 1), popover (Phase 3 new) | Phase 1 blocks: view passed -- no flags -- 2026-04-06. Popover: pending vetting at plan execution. |
+| neobrutalism.dev (`@neobrutalism/*`) | button, card, input, label, select, table, dialog, badge, tooltip, skeleton, sonner, sheet (Phase 1), popover (Phase 3 new) | Phase 1 blocks: view passed -- no flags -- 2026-04-06. Popover: view passed -- no flags -- 2026-04-07. Thin wrapper over @radix-ui/react-popover, no network calls, no eval, no dynamic imports, no env access. |
 
 ### Popover Vetting Gate
 
