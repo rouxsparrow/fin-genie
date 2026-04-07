@@ -252,4 +252,91 @@ describe('parseStatementText', () => {
     assert.strictEqual(parsed.transactions[2].isDebit, true);
     assert.strictEqual(parsed.transactions[2].amountCents, 750);
   });
+
+  it('infers period from transactions when statement period not in text (fallback)', () => {
+    // Simulates real Citibank SG PDF where pages 1-6 are image-only
+    const configWithFallback: BankFormatConfig = {
+      ...citibankConfig,
+      period_fallback: {
+        year_hint_pattern: 'Payment Due Date:\\s+(.+?)\\s*$',
+        year_hint_format: 'MMMM d, yyyy',
+        strategy: 'infer_from_transactions',
+      },
+      section_markers: undefined, // removed — not in extractable text
+      skip_patterns: [
+        ...citibankConfig.skip_patterns,
+        '^XXXX-XXXX-XXXX-\\d{4}$',
+        'CITI CASH BACK',
+        'TRANSACTIONS FOR',
+        'ALL TRANSACTIONS BILLED',
+        'DATE\\s+DESCRIPTION\\s+AMOUNT',
+      ],
+    };
+
+    const realPage = [
+      'CITI CASH BACK PLUS MASTERCARD 5425 5045 0451 4636 Payment Due Date: March 16, 2026\n' +
+      'DATE DESCRIPTION AMOUNT (SGD)\n' +
+      'TRANSACTIONS FOR CITI CASH BACK PLUS MASTERCARD\n' +
+      'ALL TRANSACTIONS BILLED IN SINGAPORE DOLLARS\n' +
+      'BALANCE PREVIOUS STATEMENT 1,386.00\n' +
+      '05 FEB FAST INCOMING PAYMENT (1,386.00)\n' +
+      'SUB-TOTAL: 0.00\n' +
+      'CITI CASH BACK PLUS MASTERCARD 5425 5045 0451 4636 - LE VIET PHUONG\n' +
+      '12 JAN BUS/MRT 780237529 SINGAPORE SG 19.84\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '17 JAN BUS/MRT 783987301 SINGAPORE SG 10.03\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '18 JAN Kopitiam Investment Pt SINGAPORE SG 21.42\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '05 FEB SAI GON QUAN SINGAPORE SG 20.80\n' +
+      'XXXX-XXXX-XXXX-0016',
+    ];
+
+    const result = parseStatementText(realPage, configWithFallback);
+    assert.strictEqual('transactions' in result, true);
+    const parsed = result as ParseResult;
+
+    // Should find 5 transactions (payment + 3 purchases + 1 feb purchase)
+    // Payment is: 05 FEB FAST INCOMING PAYMENT (1,386.00)
+    assert.ok(parsed.transactions.length >= 4, `Expected >= 4 transactions, got ${parsed.transactions.length}`);
+
+    // Period inferred from transaction dates: Jan 12 to Feb 5, 2026
+    assert.strictEqual(parsed.statementPeriodStart, '2026-01-12');
+    assert.strictEqual(parsed.statementPeriodEnd, '2026-02-05');
+
+    // Card numbers should NOT appear in descriptions
+    for (const tx of parsed.transactions) {
+      assert.ok(!tx.description.includes('XXXX-XXXX'), `Description should not contain card number: ${tx.description}`);
+    }
+
+    // First real purchase should be BUS/MRT
+    const busTx = parsed.transactions.find(t => t.description.includes('BUS/MRT 780237529'));
+    assert.ok(busTx, 'Should find BUS/MRT transaction');
+    assert.strictEqual(busTx!.amountCents, 1984);
+    assert.strictEqual(busTx!.isDebit, true);
+  });
+
+  it('skips card number continuation lines with XXXX pattern', () => {
+    const configWithSkip: BankFormatConfig = {
+      ...citibankConfig,
+      skip_patterns: [...citibankConfig.skip_patterns, '^XXXX-XXXX-XXXX-\\d{4}$'],
+    };
+    const page = [
+      'Statement Period: 01/01/2026 to 31/01/2026\n' +
+      '\n' +
+      'NEW TRANSACTIONS\n' +
+      '15 JAN GRAB TRANSPORT 15.00\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '16 JAN FAIRPRICE FINEST 89.00\n' +
+      'XXXX-XXXX-XXXX-8521\n' +
+      'SUB-TOTAL 104.00',
+    ];
+    const result = parseStatementText(page, configWithSkip);
+    assert.strictEqual('transactions' in result, true);
+    const parsed = result as ParseResult;
+    assert.strictEqual(parsed.transactions.length, 2);
+    // Card number should NOT be in description
+    assert.ok(!parsed.transactions[0].description.includes('XXXX'));
+    assert.ok(!parsed.transactions[1].description.includes('XXXX'));
+  });
 });

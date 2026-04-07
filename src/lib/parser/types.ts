@@ -3,6 +3,11 @@ export interface BankFormatConfig {
     pattern: string;       // Regex to find statement period text
     date_format: string;   // e.g., "dd/MM/yyyy" or "dd MMM yyyy"
   };
+  period_fallback?: {
+    year_hint_pattern: string;   // Regex to extract a year reference (e.g., from "Payment Due Date: March 16, 2026")
+    year_hint_format: string;    // date-fns format for the captured date (e.g., "MMMM d, yyyy")
+    strategy: 'infer_from_transactions'; // Derive period from min/max transaction dates
+  };
   transaction: {
     line_pattern: string;          // Regex with capture groups for date, desc, amount
     date_format: string;           // e.g., "dd MMM" (no year in Citibank SG)

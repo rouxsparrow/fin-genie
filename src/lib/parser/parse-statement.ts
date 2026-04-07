@@ -126,24 +126,95 @@ export function parseStatementText(
     }
   }
 
-  if (!periodStartStr || !periodEndStr) {
+  let periodStart: Date;
+  let periodEnd: Date;
+  let usingFallback = false;
+
+  if (periodStartStr && periodEndStr) {
+    // 3a. Parse period dates from explicit statement period
+    periodStart = parse(
+      periodStartStr,
+      config.statement_period.date_format,
+      new Date(),
+    );
+    periodEnd = parse(
+      periodEndStr,
+      config.statement_period.date_format,
+      new Date(),
+    );
+  } else if (config.period_fallback?.strategy === 'infer_from_transactions') {
+    // 3b. Fallback: infer period from transaction dates
+    // First, extract a year hint from the document
+    let hintYear: number | null = null;
+
+    if (config.period_fallback.year_hint_pattern) {
+      const hintRegex = new RegExp(config.period_fallback.year_hint_pattern);
+      for (const line of allLines) {
+        const hintMatch = line.match(hintRegex);
+        if (hintMatch) {
+          const hintDate = parse(
+            hintMatch[1].trim(),
+            config.period_fallback.year_hint_format,
+            new Date(),
+          );
+          if (!isNaN(hintDate.getTime())) {
+            hintYear = hintDate.getFullYear();
+            break;
+          }
+        }
+      }
+    }
+
+    if (!hintYear) {
+      hintYear = new Date().getFullYear();
+    }
+
+    // Collect all transaction dates from the document to determine the range
+    const txRegexForDates = new RegExp(config.transaction.line_pattern);
+    const txDates: Date[] = [];
+
+    for (const line of allLines) {
+      const match = line.trim().match(txRegexForDates);
+      if (match) {
+        const dateStr = match[1].trim();
+        // Parse with hint year first, then try hint year - 1 for cross-year
+        const withHintYear = parse(
+          `${dateStr} ${hintYear}`,
+          'dd MMM yyyy',
+          new Date(),
+        );
+        if (!isNaN(withHintYear.getTime())) {
+          txDates.push(withHintYear);
+        }
+      }
+    }
+
+    if (txDates.length === 0) {
+      return {
+        code: 'no_transactions',
+        message: 'No transaction dates found to infer statement period',
+      };
+    }
+
+    // Sort dates and use min/max
+    txDates.sort((a, b) => a.getTime() - b.getTime());
+    const minDate = txDates[0];
+    const maxDate = txDates[txDates.length - 1];
+
+    // Handle cross-year: if min month > max month, min is from previous year
+    if (minDate.getMonth() > maxDate.getMonth()) {
+      minDate.setFullYear(minDate.getFullYear() - 1);
+    }
+
+    periodStart = minDate;
+    periodEnd = maxDate;
+    usingFallback = true;
+  } else {
     return {
       code: 'unsupported_format',
       message: 'Could not find statement period in the document',
     };
   }
-
-  // 3. Parse period dates
-  const periodStart = parse(
-    periodStartStr,
-    config.statement_period.date_format,
-    new Date(),
-  );
-  const periodEnd = parse(
-    periodEndStr,
-    config.statement_period.date_format,
-    new Date(),
-  );
 
   // 4. Find section boundaries
   let startIdx = 0;
