@@ -32,7 +32,7 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : profile?.role === 'admin' ? (
         <EmptyState
-          icon={BarChart3}
+          icon={<BarChart3 size={48} />}
           heading="No spending data yet"
           body="Upload your first bank statement to start tracking where your money goes."
           ctaLabel="Import Statement"
@@ -41,7 +41,7 @@ export default function DashboardPage() {
         />
       ) : (
         <EmptyState
-          icon={BarChart3}
+          icon={<BarChart3 size={48} />}
           heading="No spending data yet"
           body="Ask your admin to import a statement to start viewing spending data."
         />

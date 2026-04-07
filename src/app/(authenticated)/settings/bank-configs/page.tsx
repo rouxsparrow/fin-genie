@@ -151,7 +151,7 @@ export default async function BankConfigsPage() {
         </p>
         <div className="h-6" />
         <EmptyState
-          icon={Settings}
+          icon={<Settings size={48} />}
           heading="No bank formats configured"
           body="Bank format configurations will appear here once seeded."
         />

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/tooltip';
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: ReactNode;
   heading: string;
   body: string;
   ctaLabel?: string;
@@ -23,7 +23,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   heading,
   body,
   ctaLabel,
@@ -36,7 +36,7 @@ export function EmptyState({
     <div className="max-w-[480px] mx-auto">
       <Card>
         <CardContent className="p-8 text-center flex flex-col items-center">
-          <Icon size={48} className="opacity-50" />
+          <div className="opacity-50">{icon}</div>
           <div className="h-4" />
           <h2 className="text-2xl font-bold">{heading}</h2>
           <div className="h-2" />

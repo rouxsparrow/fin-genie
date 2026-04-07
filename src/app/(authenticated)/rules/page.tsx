@@ -54,7 +54,7 @@ export default async function RulesPage() {
 
       {userRules.length === 0 && allRules.length <= 1 ? (
         <EmptyState
-          icon={ListFilter}
+          icon={<ListFilter size={48} />}
           heading="No rules yet"
           body="Create your first rule to start categorizing transactions automatically."
           ctaLabel="Add Rule"

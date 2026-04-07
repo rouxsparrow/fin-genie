@@ -20,7 +20,7 @@ export default async function ImportHistoryPage() {
         <h1 className="text-2xl font-bold">Import History</h1>
         <div className="h-8" />
         <EmptyState
-          icon={FileText}
+          icon={<FileText size={48} />}
           heading="No imports yet"
           body="Upload your first bank statement to start tracking your spending."
           ctaLabel="Import Statement"

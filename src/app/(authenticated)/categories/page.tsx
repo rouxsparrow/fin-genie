@@ -49,7 +49,7 @@ export default async function CategoriesPage() {
 
       {allCategories.length === 0 ? (
         <EmptyState
-          icon={Tags}
+          icon={<Tags size={48} />}
           heading="No categories yet"
           body="Categories will be created when you set up your first categorization rule."
           ctaLabel="Go to Rules"
