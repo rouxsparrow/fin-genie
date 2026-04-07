@@ -39,8 +39,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', disabled: false, adminOnly: false },
   { label: 'Transactions', icon: Receipt, href: '/transactions', disabled: true, adminOnly: false },
   { label: 'Import', icon: Upload, href: '/import', disabled: false, adminOnly: true },
-  { label: 'Rules', icon: ListFilter, href: '/rules', disabled: true, adminOnly: true },
-  { label: 'Categories', icon: Tags, href: '/categories', disabled: true, adminOnly: true },
+  { label: 'Rules', icon: ListFilter, href: '/rules', disabled: false, adminOnly: true },
+  { label: 'Categories', icon: Tags, href: '/categories', disabled: false, adminOnly: true },
   { label: 'Settings', icon: Settings, href: '/settings', disabled: false, adminOnly: true },
 ];
 
