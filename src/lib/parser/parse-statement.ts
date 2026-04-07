@@ -1,0 +1,262 @@
+import { parse, isWithinInterval, format } from 'date-fns';
+import { computeTransactionHash } from './hash';
+import type {
+  BankFormatConfig,
+  ParsedTransaction,
+  ParseResult,
+  ParseError,
+} from './types';
+
+/**
+ * Parse a raw amount string into cents and debit/credit flag.
+ * Credits are indicated by parentheses: "(89.00)" => credit.
+ * All amounts are stored as positive integers in cents.
+ */
+export function parseAmount(raw: string): {
+  amountCents: number;
+  isDebit: boolean;
+} {
+  const trimmed = raw.trim();
+
+  // Detect credit indicator: parentheses
+  const isCredit = trimmed.startsWith('(') && trimmed.endsWith(')');
+
+  // Strip parentheses and commas
+  const cleaned = trimmed.replace(/[(),]/g, '');
+
+  const value = parseFloat(cleaned);
+  if (isNaN(value) || value < 0) {
+    throw new Error(`Invalid amount: "${raw}"`);
+  }
+
+  const amountCents = Math.round(value * 100);
+
+  return {
+    amountCents,
+    isDebit: !isCredit,
+  };
+}
+
+/**
+ * Infer the full date (with year) from a date string like "15 MAR"
+ * using the statement period boundaries for cross-year resolution.
+ *
+ * Strategy: Try parsing with the start year first. If the resulting date
+ * falls within the period (with a small buffer), use it. Otherwise, try
+ * the end year. Fallback to end year.
+ */
+export function inferTransactionDate(
+  dateStr: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Date {
+  const startYear = periodStart.getFullYear();
+  const endYear = periodEnd.getFullYear();
+
+  // Try parsing with start year
+  const withStartYear = parse(
+    `${dateStr} ${startYear}`,
+    'dd MMM yyyy',
+    new Date(),
+  );
+
+  // If start year and end year are the same, just use start year
+  if (startYear === endYear) {
+    return withStartYear;
+  }
+
+  // Cross-year scenario: check if the date with start year falls within period
+  try {
+    if (
+      isWithinInterval(withStartYear, { start: periodStart, end: periodEnd })
+    ) {
+      return withStartYear;
+    }
+  } catch {
+    // isWithinInterval can throw if date is invalid
+  }
+
+  // Try with end year
+  const withEndYear = parse(
+    `${dateStr} ${endYear}`,
+    'dd MMM yyyy',
+    new Date(),
+  );
+
+  try {
+    if (isWithinInterval(withEndYear, { start: periodStart, end: periodEnd })) {
+      return withEndYear;
+    }
+  } catch {
+    // fallback below
+  }
+
+  // Fallback: use end year
+  return withEndYear;
+}
+
+/**
+ * Parse statement text (per-page arrays) using a bank format config.
+ * Pure function: no side effects, no I/O, no database access.
+ *
+ * Returns ParseResult on success or ParseError on failure.
+ */
+export function parseStatementText(
+  pageTexts: string[],
+  config: BankFormatConfig,
+): ParseResult | ParseError {
+  // 1. Concatenate all page texts into a single lines array
+  const allLines: string[] = [];
+  for (const pageText of pageTexts) {
+    const lines = pageText.split('\n');
+    allLines.push(...lines);
+  }
+
+  // 2. Extract statement period
+  const periodRegex = new RegExp(config.statement_period.pattern);
+  let periodStartStr: string | null = null;
+  let periodEndStr: string | null = null;
+
+  for (const line of allLines) {
+    const periodMatch = line.match(periodRegex);
+    if (periodMatch) {
+      periodStartStr = periodMatch[1].trim();
+      periodEndStr = periodMatch[2].trim();
+      break;
+    }
+  }
+
+  if (!periodStartStr || !periodEndStr) {
+    return {
+      code: 'unsupported_format',
+      message: 'Could not find statement period in the document',
+    };
+  }
+
+  // 3. Parse period dates
+  const periodStart = parse(
+    periodStartStr,
+    config.statement_period.date_format,
+    new Date(),
+  );
+  const periodEnd = parse(
+    periodEndStr,
+    config.statement_period.date_format,
+    new Date(),
+  );
+
+  // 4. Find section boundaries
+  let startIdx = 0;
+  let endIdx = allLines.length;
+
+  if (config.section_markers?.start) {
+    const startPattern = new RegExp(config.section_markers.start);
+    for (let i = 0; i < allLines.length; i++) {
+      if (startPattern.test(allLines[i])) {
+        startIdx = i + 1; // Start processing AFTER the marker
+        break;
+      }
+    }
+  }
+
+  if (config.section_markers?.end) {
+    const endPattern = new RegExp(config.section_markers.end);
+    for (let i = startIdx; i < allLines.length; i++) {
+      if (endPattern.test(allLines[i])) {
+        endIdx = i; // Stop processing BEFORE the marker
+        break;
+      }
+    }
+  }
+
+  // 5. Build skip pattern regexes
+  const skipRegexes = config.skip_patterns.map((p) => new RegExp(p));
+
+  // 6. Parse transactions
+  const txRegex = new RegExp(config.transaction.line_pattern);
+  const transactions: ParsedTransaction[] = [];
+  const sectionLines = allLines.slice(startIdx, endIdx);
+
+  let i = 0;
+  while (i < sectionLines.length) {
+    const line = sectionLines[i].trim();
+
+    // Skip empty lines
+    if (!line) {
+      i++;
+      continue;
+    }
+
+    // Skip noise lines
+    if (skipRegexes.some((r) => r.test(line))) {
+      i++;
+      continue;
+    }
+
+    // Try matching transaction pattern
+    const txMatch = line.match(txRegex);
+    if (txMatch) {
+      const dateStr = txMatch[1].trim();
+      let description = txMatch[2].trim();
+      const amountStr = txMatch[3].trim();
+
+      // Parse amount
+      const { amountCents, isDebit } = parseAmount(amountStr);
+
+      // Infer full date
+      const txDate = inferTransactionDate(dateStr, periodStart, periodEnd);
+      const dateIso = format(txDate, 'yyyy-MM-dd');
+
+      // Handle description continuation
+      if (config.transaction.description_continuation) {
+        while (i + 1 < sectionLines.length) {
+          const nextLine = sectionLines[i + 1].trim();
+          if (!nextLine) {
+            break;
+          }
+          // If next line matches transaction pattern or skip pattern, stop
+          if (txRegex.test(nextLine) || skipRegexes.some((r) => r.test(nextLine))) {
+            break;
+          }
+          // Append to description
+          description += ' ' + nextLine;
+          i++;
+        }
+      }
+
+      // Compute hash
+      const hash = computeTransactionHash(
+        dateIso,
+        description,
+        amountCents,
+        isDebit,
+      );
+
+      transactions.push({
+        date: dateIso,
+        description,
+        amountCents,
+        isDebit,
+        hash,
+      });
+    }
+
+    i++;
+  }
+
+  // 7. Check if any transactions were found
+  if (transactions.length === 0) {
+    return {
+      code: 'no_transactions',
+      message: 'No transaction lines found in the document',
+    };
+  }
+
+  // 8. Return ParseResult
+  return {
+    transactions,
+    statementPeriodStart: format(periodStart, 'yyyy-MM-dd'),
+    statementPeriodEnd: format(periodEnd, 'yyyy-MM-dd'),
+    totalPages: pageTexts.length,
+  };
+}
