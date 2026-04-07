@@ -57,6 +57,7 @@ function ImportPageSkeleton() {
 export default function ImportPage() {
   const { profile, loading } = useProfile();
   const [state, setState] = useState<ImportPageState>(initialState);
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
 
   const isAdmin = profile?.role === 'admin';
 
@@ -113,6 +114,7 @@ export default function ImportPage() {
       statementPeriodStart: state.parseResult.statementPeriodStart,
       statementPeriodEnd: state.parseResult.statementPeriodEnd,
       fileName: state.fileName,
+      categoryMap,
     });
 
     if (result.success) {
@@ -120,6 +122,7 @@ export default function ImportPage() {
         `${result.transactionCount} transactions imported from ${result.period}.`,
       );
       setState(initialState);
+      setCategoryMap({});
     } else {
       toast.error('Import failed. Please try again.');
       setState((prev) => ({ ...prev, status: 'review' }));
@@ -128,6 +131,7 @@ export default function ImportPage() {
 
   function handleReset() {
     setState(initialState);
+    setCategoryMap({});
   }
 
   if (loading) {
@@ -163,6 +167,7 @@ export default function ImportPage() {
             onImport={handleImport}
             onUploadAnother={handleReset}
             isImporting={state.status === 'importing'}
+            onCategoryMapChange={setCategoryMap}
           />
         )}
 

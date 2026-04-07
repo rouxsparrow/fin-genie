@@ -1,7 +1,7 @@
 'use client';
 
 import { format, parseISO } from 'date-fns';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,14 +10,28 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import {
+  Popover,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { RuleCreationPopover } from '@/components/rules/rule-creation-popover';
 import { TransactionCard } from '@/components/import/transaction-card';
 import { cn } from '@/lib/utils';
 import type { ParsedTransaction } from '@/lib/parser/types';
+import type { Rule, Category } from '@/lib/types/database';
 
 interface TransactionTableProps {
   transactions: ParsedTransaction[];
   duplicateHashes: Set<string>;
   section: 'categorized' | 'uncategorized';
+  categoryMap?: Map<string, string>;
+  categoryLookup?: Map<string, Category>;
+  categories?: Category[];
+  openPopoverHash?: string | null;
+  onOpenPopover?: (hash: string | null) => void;
+  onRuleCreated?: (rule: Rule) => void;
+  onCategoryCreated?: (cat: Category) => void;
 }
 
 function formatCurrency(amountCents: number, isDebit: boolean): string {
@@ -33,10 +47,19 @@ export function TransactionTable({
   transactions,
   duplicateHashes,
   section,
+  categoryMap,
+  categoryLookup,
+  categories,
+  openPopoverHash,
+  onOpenPopover,
+  onRuleCreated,
+  onCategoryCreated,
 }: TransactionTableProps) {
   if (transactions.length === 0) {
     return null;
   }
+
+  const isUncategorizedSection = section === 'uncategorized';
 
   return (
     <>
@@ -56,8 +79,13 @@ export function TransactionTable({
           <TableBody>
             {transactions.map((tx, index) => {
               const isDuplicate = duplicateHashes.has(tx.hash);
+              const categoryId = categoryMap?.get(tx.hash);
+              const category = categoryId
+                ? categoryLookup?.get(categoryId)
+                : undefined;
+              const isPopoverOpen = openPopoverHash === tx.hash;
 
-              return (
+              const rowContent = (
                 <TableRow
                   key={tx.hash}
                   className={cn(
@@ -65,10 +93,46 @@ export function TransactionTable({
                     index % 2 === 0
                       ? 'bg-secondary-background'
                       : 'bg-background',
-                    isDuplicate &&
-                      'opacity-50 hover:bg-transparent',
+                    isDuplicate && 'opacity-50 hover:bg-transparent',
+                    isUncategorizedSection &&
+                      !isDuplicate &&
+                      'cursor-pointer hover:bg-background',
+                    isPopoverOpen && 'border-l-2 border-l-main',
                   )}
                   aria-disabled={isDuplicate || undefined}
+                  role={
+                    isUncategorizedSection && !isDuplicate
+                      ? 'button'
+                      : undefined
+                  }
+                  tabIndex={
+                    isUncategorizedSection && !isDuplicate ? 0 : undefined
+                  }
+                  aria-haspopup={
+                    isUncategorizedSection && !isDuplicate
+                      ? 'dialog'
+                      : undefined
+                  }
+                  aria-expanded={
+                    isUncategorizedSection && !isDuplicate
+                      ? isPopoverOpen
+                      : undefined
+                  }
+                  onClick={
+                    isUncategorizedSection && !isDuplicate
+                      ? () => onOpenPopover?.(tx.hash)
+                      : undefined
+                  }
+                  onKeyDown={
+                    isUncategorizedSection && !isDuplicate
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenPopover?.(tx.hash);
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   <TableCell
                     className={cn(
@@ -105,10 +169,17 @@ export function TransactionTable({
                       isDuplicate && 'line-through',
                     )}
                   >
-                    {section === 'categorized' ? (
-                      <span className="text-sm font-medium opacity-40">
-                        --
-                      </span>
+                    {category ? (
+                      <Badge
+                        variant={
+                          category.is_system ? 'neutral' : 'default'
+                        }
+                      >
+                        {category.is_system && (
+                          <Lock className="h-3 w-3" />
+                        )}
+                        {category.name}
+                      </Badge>
                     ) : (
                       <span className="text-sm font-medium opacity-40">
                         --
@@ -117,6 +188,39 @@ export function TransactionTable({
                   </TableCell>
                 </TableRow>
               );
+
+              // Wrap uncategorized rows with Popover
+              if (
+                isUncategorizedSection &&
+                !isDuplicate &&
+                categories &&
+                onRuleCreated &&
+                onCategoryCreated
+              ) {
+                return (
+                  <Popover
+                    key={tx.hash}
+                    open={isPopoverOpen}
+                    onOpenChange={(open) =>
+                      onOpenPopover?.(open ? tx.hash : null)
+                    }
+                  >
+                    <PopoverTrigger asChild>{rowContent}</PopoverTrigger>
+                    <RuleCreationPopover
+                      description={tx.description}
+                      categories={categories}
+                      onRuleCreated={onRuleCreated}
+                      onCategoryCreated={onCategoryCreated}
+                      open={isPopoverOpen}
+                      onOpenChange={(open) =>
+                        onOpenPopover?.(open ? tx.hash : null)
+                      }
+                    />
+                  </Popover>
+                );
+              }
+
+              return rowContent;
             })}
           </TableBody>
         </Table>
@@ -126,17 +230,60 @@ export function TransactionTable({
       <div className="flex flex-col gap-2 md:hidden">
         {transactions.map((tx) => {
           const isDuplicate = duplicateHashes.has(tx.hash);
+          const categoryId = categoryMap?.get(tx.hash);
+          const category = categoryId
+            ? categoryLookup?.get(categoryId)
+            : undefined;
+          const isPopoverOpen = openPopoverHash === tx.hash;
 
-          return (
+          const card = (
             <TransactionCard
               key={tx.hash}
               transaction={tx}
               isDuplicate={isDuplicate}
-              category={
-                section === 'categorized' ? undefined : undefined
+              categoryName={category?.name}
+              isSystemCategory={category?.is_system}
+              isUncategorized={isUncategorizedSection && !isDuplicate}
+              onTap={
+                isUncategorizedSection && !isDuplicate
+                  ? () => onOpenPopover?.(tx.hash)
+                  : undefined
               }
             />
           );
+
+          // Wrap uncategorized cards with Popover
+          if (
+            isUncategorizedSection &&
+            !isDuplicate &&
+            categories &&
+            onRuleCreated &&
+            onCategoryCreated
+          ) {
+            return (
+              <Popover
+                key={tx.hash}
+                open={isPopoverOpen}
+                onOpenChange={(open) =>
+                  onOpenPopover?.(open ? tx.hash : null)
+                }
+              >
+                <PopoverTrigger asChild>{card}</PopoverTrigger>
+                <RuleCreationPopover
+                  description={tx.description}
+                  categories={categories}
+                  onRuleCreated={onRuleCreated}
+                  onCategoryCreated={onCategoryCreated}
+                  open={isPopoverOpen}
+                  onOpenChange={(open) =>
+                    onOpenPopover?.(open ? tx.hash : null)
+                  }
+                />
+              </Popover>
+            );
+          }
+
+          return card;
         })}
       </div>
     </>

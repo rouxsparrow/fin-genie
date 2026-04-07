@@ -1,6 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { evaluateRules } from '@/lib/rules/evaluate-rules';
+import { fetchCategories } from '@/app/actions/category-actions';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 import { CollapsedDropZone } from '@/components/import/collapsed-drop-zone';
 import { StatementSummary } from '@/components/import/statement-summary';
 import { DuplicateWarning } from '@/components/import/duplicate-warning';
@@ -8,6 +12,7 @@ import { TransactionTable } from '@/components/import/transaction-table';
 import { ImportBar } from '@/components/import/import-bar';
 import { Badge } from '@/components/ui/badge';
 import type { ParseResult } from '@/lib/parser/types';
+import type { Rule, Category } from '@/lib/types/database';
 
 interface ReviewScreenProps {
   parseResult: ParseResult;
@@ -16,6 +21,7 @@ interface ReviewScreenProps {
   onImport: () => void;
   onUploadAnother: () => void;
   isImporting: boolean;
+  onCategoryMapChange?: (map: Record<string, string>) => void;
 }
 
 export function ReviewScreen({
@@ -25,18 +31,52 @@ export function ReviewScreen({
   onImport,
   onUploadAnother,
   isImporting,
+  onCategoryMapChange,
 }: ReviewScreenProps) {
   const duplicateSet = useMemo(
     () => new Set(duplicateHashes),
     [duplicateHashes],
   );
 
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryMap, setCategoryMap] = useState<Map<string, string>>(
+    new Map(),
+  );
+  const [openPopoverHash, setOpenPopoverHash] = useState<string | null>(null);
+
+  // Load rules and categories on mount
+  useEffect(() => {
+    async function loadRulesAndCategories() {
+      const supabase = createClient();
+      const { data: rulesData } = await supabase
+        .from('rules')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (rulesData) setRules(rulesData as Rule[]);
+
+      const catResult = await fetchCategories();
+      if (catResult.success) setCategories(catResult.categories as Category[]);
+    }
+    loadRulesAndCategories();
+  }, []);
+
+  // Re-evaluate rules whenever rules change
+  useEffect(() => {
+    const nonDuplicates = parseResult.transactions.filter(
+      (t) => !duplicateSet.has(t.hash),
+    );
+    const newMap = evaluateRules(nonDuplicates, rules);
+    setCategoryMap(newMap);
+    onCategoryMapChange?.(Object.fromEntries(newMap));
+  }, [rules, parseResult.transactions, duplicateSet, onCategoryMapChange]);
+
   const { categorizedTxns, uncategorizedTxns, duplicateTxns } = useMemo(() => {
     const categorized = parseResult.transactions.filter(
-      (t) => !duplicateSet.has(t.hash) && false, // No categories in Phase 2
+      (t) => !duplicateSet.has(t.hash) && categoryMap.has(t.hash),
     );
     const uncategorized = parseResult.transactions.filter(
-      (t) => !duplicateSet.has(t.hash),
+      (t) => !duplicateSet.has(t.hash) && !categoryMap.has(t.hash),
     );
     const duplicates = parseResult.transactions.filter((t) =>
       duplicateSet.has(t.hash),
@@ -47,9 +87,56 @@ export function ReviewScreen({
       uncategorizedTxns: uncategorized,
       duplicateTxns: duplicates,
     };
-  }, [parseResult.transactions, duplicateSet]);
+  }, [parseResult.transactions, duplicateSet, categoryMap]);
 
-  const readyCount = categorizedTxns.length + uncategorizedTxns.length;
+  const categoryLookup = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const cat of categories) map.set(cat.id, cat);
+    return map;
+  }, [categories]);
+
+  const handleRuleCreated = useCallback(
+    (rule: Rule) => {
+      setRules((prev) =>
+        [...prev, rule].sort((a, b) => a.sort_order - b.sort_order),
+      );
+      setOpenPopoverHash(null);
+
+      // Count how many transactions this new rule would categorize
+      // (will be reflected after the useEffect re-evaluates)
+      const nonDuplicates = parseResult.transactions.filter(
+        (t) => !duplicateSet.has(t.hash) && !categoryMap.has(t.hash),
+      );
+      let matchCount = 0;
+      for (const tx of nonDuplicates) {
+        if (rule.match_type === 'regex') {
+          try {
+            if (new RegExp(rule.pattern, 'i').test(tx.description))
+              matchCount++;
+          } catch {
+            /* invalid regex */
+          }
+        } else {
+          if (
+            tx.description
+              .toLowerCase()
+              .includes(rule.pattern.toLowerCase())
+          )
+            matchCount++;
+        }
+      }
+      toast.success(
+        `Rule created. ${matchCount} transaction${matchCount === 1 ? '' : 's'} categorized.`,
+      );
+    },
+    [parseResult.transactions, duplicateSet, categoryMap],
+  );
+
+  const handleCategoryCreated = useCallback((cat: Category) => {
+    setCategories((prev) =>
+      [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+  }, []);
 
   const { totalDebits, totalCredits } = useMemo(() => {
     const nonDuplicates = parseResult.transactions.filter(
@@ -83,7 +170,7 @@ export function ReviewScreen({
       <StatementSummary
         periodStart={parseResult.statementPeriodStart}
         periodEnd={parseResult.statementPeriodEnd}
-        totalTransactions={readyCount}
+        totalTransactions={categorizedTxns.length + uncategorizedTxns.length}
         totalDebits={totalDebits}
         totalCredits={totalCredits}
       />
@@ -107,6 +194,9 @@ export function ReviewScreen({
           transactions={categorizedTxns}
           duplicateHashes={duplicateSet}
           section="categorized"
+          categoryMap={categoryMap}
+          categoryLookup={categoryLookup}
+          categories={categories}
         />
       )}
 
@@ -122,6 +212,13 @@ export function ReviewScreen({
           transactions={uncategorizedTxns}
           duplicateHashes={duplicateSet}
           section="uncategorized"
+          categoryMap={categoryMap}
+          categoryLookup={categoryLookup}
+          categories={categories}
+          openPopoverHash={openPopoverHash}
+          onOpenPopover={setOpenPopoverHash}
+          onRuleCreated={handleRuleCreated}
+          onCategoryCreated={handleCategoryCreated}
         />
       )}
 
@@ -136,7 +233,9 @@ export function ReviewScreen({
 
       {/* Import bar */}
       <ImportBar
-        readyCount={readyCount}
+        categorizedCount={categorizedTxns.length}
+        totalCount={categorizedTxns.length + uncategorizedTxns.length}
+        allCategorized={uncategorizedTxns.length === 0}
         onImport={onImport}
         isImporting={isImporting}
       />

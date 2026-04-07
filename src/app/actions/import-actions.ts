@@ -156,6 +156,7 @@ export async function importTransactions(data: {
   statementPeriodStart: string;
   statementPeriodEnd: string;
   fileName: string;
+  categoryMap?: Record<string, string>;
 }): Promise<ImportTransactionsResult> {
   try {
     // 1. Verify admin
@@ -193,6 +194,7 @@ export async function importTransactions(data: {
         data.transactions.map((t) => ({
           household_id: householdId,
           import_id: importRecord.id,
+          category_id: data.categoryMap?.[t.hash] ?? null,
           transaction_date: t.date,
           description: t.description,
           amount_cents: t.amountCents,

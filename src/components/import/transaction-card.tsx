@@ -1,15 +1,19 @@
 'use client';
 
 import { format, parseISO } from 'date-fns';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ParsedTransaction } from '@/lib/parser/types';
 
 interface TransactionCardProps {
   transaction: ParsedTransaction;
   isDuplicate: boolean;
-  category?: string;
+  categoryName?: string;
+  isSystemCategory?: boolean;
+  isUncategorized?: boolean;
+  onTap?: () => void;
 }
 
 function formatCurrency(amountCents: number, isDebit: boolean): string {
@@ -24,15 +28,39 @@ function formatCurrency(amountCents: number, isDebit: boolean): string {
 export function TransactionCard({
   transaction,
   isDuplicate,
-  category,
+  categoryName,
+  isSystemCategory,
+  isUncategorized,
+  onTap,
 }: TransactionCardProps) {
   return (
     <Card
-      className={cn(isDuplicate && 'opacity-50')}
+      className={cn(
+        isDuplicate && 'opacity-50',
+        isUncategorized && 'cursor-pointer',
+      )}
       aria-disabled={isDuplicate || undefined}
+      onClick={isUncategorized && onTap ? onTap : undefined}
+      role={isUncategorized ? 'button' : undefined}
+      tabIndex={isUncategorized ? 0 : undefined}
+      onKeyDown={
+        isUncategorized && onTap
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onTap();
+              }
+            }
+          : undefined
+      }
     >
       <CardContent className="p-4">
-        <div className={cn('flex flex-col gap-1', isDuplicate && 'line-through')}>
+        <div
+          className={cn(
+            'flex flex-col gap-1',
+            isDuplicate && 'line-through',
+          )}
+        >
           <div className="flex items-center gap-1.5">
             {isDuplicate && (
               <AlertTriangle className="h-4 w-4 shrink-0 text-[#d97706]" />
@@ -47,9 +75,16 @@ export function TransactionCard({
               {formatCurrency(transaction.amountCents, transaction.isDebit)}
             </p>
           </div>
-          <p className="text-sm font-medium opacity-40">
-            {category ?? '--'}
-          </p>
+          <div>
+            {categoryName ? (
+              <Badge variant={isSystemCategory ? 'neutral' : 'default'}>
+                {isSystemCategory && <Lock className="h-3 w-3" />}
+                {categoryName}
+              </Badge>
+            ) : (
+              <span className="text-sm font-medium opacity-40">--</span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
