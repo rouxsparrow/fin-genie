@@ -146,6 +146,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      bank_configs: {
+        Row: {
+          id: string;
+          household_id: string;
+          name: string;
+          bank_name: string;
+          country_code: string;
+          statement_type: string;
+          config: Record<string, unknown>;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          household_id: string;
+          name: string;
+          bank_name: string;
+          country_code: string;
+          statement_type: string;
+          config: Record<string, unknown>;
+          is_default?: boolean;
+        };
+        Update: {
+          household_id?: string;
+          name?: string;
+          bank_name?: string;
+          country_code?: string;
+          statement_type?: string;
+          config?: Record<string, unknown>;
+          is_default?: boolean;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -162,3 +195,4 @@ export type Category = Database['public']['Tables']['categories']['Row'];
 export type Rule = Database['public']['Tables']['rules']['Row'];
 export type Import = Database['public']['Tables']['imports']['Row'];
 export type Transaction = Database['public']['Tables']['transactions']['Row'];
+export type BankConfig = Database['public']['Tables']['bank_configs']['Row'];
