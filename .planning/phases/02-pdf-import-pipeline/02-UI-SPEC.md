@@ -100,7 +100,7 @@ These semantic colors are NOT applied to backgrounds or large surfaces. They are
 
 The amber accent (`--main`) is used on these additional elements in Phase 2:
 
-1. **"Import" button in sticky bar** -- primary action to confirm import (amber bg, disabled state when uncategorized transactions exist)
+1. **"Import {N} Transactions" button in sticky bar** -- primary action to confirm import (amber bg, disabled state when uncategorized transactions exist)
 2. **"Upload another" link** -- amber text-decoration underline on hover
 3. **Active "Import" sidebar nav item** -- amber background (inherited pattern)
 4. **Drop zone icon** -- `Upload` icon uses amber (`text-main`) at 48px
@@ -135,7 +135,7 @@ Inherited from Phase 1. All tokens apply to Phase 2 components identically:
 
 | Component | Source | Phase 2 Usage |
 |-----------|--------|---------------|
-| Button | `@neobrutalism/button` | "Import" in sticky bar, "Upload another", "Try Again" on error card |
+| Button | `@neobrutalism/button` | "Import {N} Transactions" in sticky bar, "Upload another", "Upload Again" on error card |
 | Card | `@neobrutalism/card` | Statement summary card, error card, mobile transaction cards |
 | Table | `@neobrutalism/table` | Transaction review table, import history table |
 | Badge | `@neobrutalism/badge` | Section count badges ("12 Categorized", "3 Uncategorized"), category badges on transactions |
@@ -296,10 +296,10 @@ Displayed between the summary card and transaction sections when duplicates are 
 - Background: white (`--secondary-background`), `border-t-2 border-border`, `shadow-shadow` (shadow goes upward: `0 -4px 0 0 var(--border)`)
 - Content flex row with 16px horizontal padding:
   - Left: "{N} transactions ready" (16px/700) -- count excludes duplicates
-  - Right: "Import" button (amber accent, `variant="default"`)
+  - Right: "Import {N} Transactions" button (amber accent, `variant="default"`)
 - Button states:
-  - Active: amber bg, "Import" label, enabled when at least 1 non-duplicate transaction exists
-  - Disabled: 50% opacity, "Import" label -- disabled until Phase 3 adds the 100% categorization gate (all transactions will be uncategorized in Phase 2, but button still works for raw import)
+  - Active: amber bg, "Import {N} Transactions" label, enabled when at least 1 non-duplicate transaction exists
+  - Disabled: 50% opacity, "Import Transactions" label (no count when disabled) -- disabled until Phase 3 adds the 100% categorization gate (all transactions will be uncategorized in Phase 2, but button still works for raw import)
   - Loading: "Importing..." with `Loader2` spinner, disabled
 
 **Phase 2 specific note:** Per D-10, the button is "disabled until Phase 3's 100% categorization gate." However, in Phase 2 there is no categorization yet, so the import button should be ENABLED -- it imports raw uncategorized transactions. The 100% gate will be layered in Phase 3. The sticky bar structure supports future Phase 3 additions (progress indicator, categorization count).
@@ -348,7 +348,7 @@ A horizontal visualization of imported vs missing statement periods.
   - **Filled** (month has imported data): `green-600` (`#16a34a`) background, white text
   - **Gap** (month missing): `red-500` (`#ef4444`) background at 20% opacity, black text
   - **Future** (month not yet reachable): `--secondary-background`, 40% opacity text
-- Month label inside each segment: abbreviated month + year if January or first visible month (e.g., "Mar", "Jan 26"), 12px/500, centered
+- Month label inside each segment: abbreviated month + year if January or first visible month (e.g., "Mar", "Jan 26"), 14px/500, centered
 - Bar spans from the earliest imported statement month to the current month
 - If fewer than 3 months of data, show a minimum of 6 month segments for visual context
 - On mobile: bar wraps to 2 rows if more than 6 months, or scrolls horizontally
@@ -374,7 +374,7 @@ A horizontal visualization of imported vs missing statement periods.
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (import action) | "Import" |
+| Primary CTA (import action) | "Import {N} Transactions" |
 | Primary CTA (upload page idle) | "Drag your PDF here or click to browse" |
 | Drop zone subtext | "Citibank SG credit card statements only. Max 4MB." |
 | Drop zone drag active | "Drop PDF to upload" |
@@ -394,8 +394,8 @@ A horizontal visualization of imported vs missing statement periods.
 | Error card heading | "Could not parse this PDF" |
 | Error card body (unsupported) | "This PDF does not match any configured bank format. Only Citibank SG credit card statements are supported." |
 | Error card body (no txns) | "No transactions found in this PDF. The file may be corrupted or a different document type." |
-| Error card body (parse fail) | "Something went wrong while reading this PDF. Please check the file and try again." |
-| Error card CTA | "Try Again" |
+| Error card body (parse fail) | "This PDF could not be read. The file may be damaged or in an unexpected format." |
+| Error card CTA | "Upload Again" |
 | Toast: file type rejected | "Only PDF files are supported." |
 | Toast: file too large | "File too large. Maximum size is 4MB." |
 | Toast: import success | "{N} transactions imported from {period}." |
@@ -426,9 +426,9 @@ A horizontal visualization of imported vs missing statement periods.
 
 | State | Visual |
 |-------|--------|
-| Default | Amber bg, "Import" label, shadow |
+| Default | Amber bg, "Import {N} Transactions" label, shadow |
 | Hover | Translate (4px, 4px), shadow removed |
-| Disabled | 50% opacity, no shadow |
+| Disabled | 50% opacity, "Import Transactions" label (no count), no shadow |
 | Loading | "Importing..." + spinner, disabled |
 | Success | Button disappears, toast confirms import, page transitions to idle state |
 
