@@ -147,7 +147,22 @@ export interface Database {
           is_debit?: boolean;
           transaction_hash?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'transactions_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transactions_import_id_fkey';
+            columns: ['import_id'];
+            isOneToOne: false;
+            referencedRelation: 'imports';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       bank_configs: {
         Row: {
