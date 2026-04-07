@@ -37,7 +37,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', disabled: false, adminOnly: false },
-  { label: 'Transactions', icon: Receipt, href: '/transactions', disabled: true, adminOnly: false },
+  { label: 'Transactions', icon: Receipt, href: '/transactions', disabled: false, adminOnly: false },
   { label: 'Import', icon: Upload, href: '/import', disabled: false, adminOnly: true },
   { label: 'Rules', icon: ListFilter, href: '/rules', disabled: false, adminOnly: true },
   { label: 'Categories', icon: Tags, href: '/categories', disabled: false, adminOnly: true },
