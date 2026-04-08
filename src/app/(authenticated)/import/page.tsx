@@ -176,7 +176,7 @@ export default function ImportPage() {
       );
       advanceToNextFile();
     } else {
-      toast.error('Import failed. Please try again.');
+      toast.error(result.error || 'Import failed. Please try again.');
       setState((prev) => ({ ...prev, status: 'review' }));
     }
   }
