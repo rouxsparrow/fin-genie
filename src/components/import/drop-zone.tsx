@@ -7,13 +7,13 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface PdfDropZoneProps {
-  onFileSelected: (file: File) => void;
+  onFilesSelected: (files: File[]) => void;
   isAdmin: boolean;
   disabled: boolean;
 }
 
 export function PdfDropZone({
-  onFileSelected,
+  onFilesSelected,
   isAdmin,
   disabled,
 }: PdfDropZoneProps) {
@@ -21,28 +21,34 @@ export function PdfDropZone({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (accepted) => {
-      if (accepted[0]) onFileSelected(accepted[0]);
+      if (accepted.length > 0) onFilesSelected(accepted);
     },
     onDropRejected: (rejections) => {
-      const code = rejections[0]?.errors[0]?.code;
-      if (code === 'file-too-large') {
-        toast.error('File too large. Maximum size is 4MB.');
-      } else if (code === 'file-invalid-type') {
-        toast.error('Only PDF files are supported.');
+      const count = rejections.length;
+      if (count === 1) {
+        const code = rejections[0]?.errors[0]?.code;
+        if (code === 'file-too-large') {
+          toast.error('File too large. Maximum size is 4MB.');
+        } else if (code === 'file-invalid-type') {
+          toast.error('Only PDF files are supported.');
+        }
+      } else {
+        toast.error(
+          `${count} file(s) rejected: only PDFs under 4MB are accepted.`,
+        );
       }
       setErrorFlash(true);
       setTimeout(() => setErrorFlash(false), 1000);
     },
     accept: { 'application/pdf': ['.pdf'] },
     maxSize: 4 * 1024 * 1024,
-    maxFiles: 1,
     disabled: !isAdmin || disabled,
   });
 
   return (
     <div
       {...getRootProps()}
-      aria-label="Upload PDF file"
+      aria-label="Upload PDF files"
       className={cn(
         'min-h-[240px] rounded-base border-2 border-dashed border-border bg-secondary-background transition-all duration-200',
         'flex flex-col items-center justify-center gap-2 px-6 py-8',
@@ -64,12 +70,12 @@ export function PdfDropZone({
           {!isAdmin
             ? 'Only admins can import statements'
             : isDragActive
-              ? 'Drop PDF to upload'
-              : 'Drag your PDF here or click to browse'}
+              ? 'Drop PDFs to upload'
+              : 'Drag PDFs here or click to browse'}
         </p>
         {isAdmin && !isDragActive && (
           <p className="text-sm font-medium opacity-40">
-            Citibank SG credit card statements only. Max 4MB.
+            Citibank SG credit card statements only. Max 4MB each.
           </p>
         )}
       </div>
