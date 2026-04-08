@@ -188,21 +188,29 @@ export async function importTransactions(data: {
       return { success: false, error: `Import record failed: ${importError?.message ?? 'Unknown error'}` };
     }
 
-    // 4. Insert transactions
-    const rows = data.transactions.map((t) => ({
-      household_id: householdId,
-      import_id: importRecord.id,
-      category_id: data.categoryMap?.[t.hash] ?? null,
-      transaction_date: t.date,
-      description: t.description,
-      amount_cents: t.amountCents,
-      is_debit: t.isDebit,
-      transaction_hash: t.hash,
-    }));
+    // 4. Deduplicate rows by hash (same date+desc+amount within one statement)
+    const seen = new Set<string>();
+    const rows = data.transactions
+      .map((t) => ({
+        household_id: householdId,
+        import_id: importRecord.id,
+        category_id: data.categoryMap?.[t.hash] ?? null,
+        transaction_date: t.date,
+        description: t.description,
+        amount_cents: t.amountCents,
+        is_debit: t.isDebit,
+        transaction_hash: t.hash,
+      }))
+      .filter((row) => {
+        if (seen.has(row.transaction_hash)) return false;
+        seen.add(row.transaction_hash);
+        return true;
+      });
 
+    // Use upsert with ignoreDuplicates to handle any remaining hash collisions
     const { error: txError } = await supabase
       .from('transactions')
-      .insert(rows);
+      .upsert(rows, { onConflict: 'transaction_hash', ignoreDuplicates: true });
 
     if (txError) {
       console.error('[importTransactions] Transaction insert failed:', txError);
@@ -211,14 +219,22 @@ export async function importTransactions(data: {
       return { success: false, error: `Transaction insert failed: ${txError.message}` };
     }
 
-    // 5. Revalidate import history
+    // 5. Update import record with actual deduplicated count
+    if (rows.length !== data.transactions.length) {
+      await supabase
+        .from('imports')
+        .update({ transaction_count: rows.length })
+        .eq('id', importRecord.id);
+    }
+
+    // 6. Revalidate import history
     revalidatePath('/import/history');
 
-    // 6. Return success
+    // 7. Return success
     return {
       success: true,
       importId: importRecord.id,
-      transactionCount: data.transactions.length,
+      transactionCount: rows.length,
       period: `${data.statementPeriodStart} to ${data.statementPeriodEnd}`,
     };
   } catch (err) {
