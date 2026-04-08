@@ -295,12 +295,13 @@ export function parseStatementText(
         }
       }
 
-      // Compute hash
+      // Compute hash (sequence index ensures uniqueness for identical transactions)
       const hash = computeTransactionHash(
         dateIso,
         description,
         amountCents,
         isDebit,
+        transactions.length,
       );
 
       transactions.push({

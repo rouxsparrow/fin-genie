@@ -5,7 +5,9 @@ export function computeTransactionHash(
   description: string,
   amountCents: number,
   isDebit: boolean,
+  sequenceIndex?: number,
 ): string {
-  const input = `${date}|${description}|${amountCents}|${isDebit}`;
+  const base = `${date}|${description}|${amountCents}|${isDebit}`;
+  const input = sequenceIndex !== undefined ? `${base}|${sequenceIndex}` : base;
   return createHash('sha256').update(input).digest('hex');
 }
