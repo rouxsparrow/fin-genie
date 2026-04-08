@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { Receipt } from 'lucide-react';
 import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
 import { useDateRange } from '@/lib/hooks/use-date-range';
@@ -21,7 +21,30 @@ import type { Category } from '@/lib/types/database';
 
 const PAGE_SIZE = 25;
 
+function TransactionsLoadingSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 p-6 md:p-8">
+      <Skeleton className="h-10 w-48" />
+      <Skeleton className="h-10 w-full" />
+      <div className="flex flex-col gap-1">
+        <Skeleton className="h-12 w-full" />
+        {Array.from({ length: 10 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<TransactionsLoadingSkeleton />}>
+      <TransactionsContent />
+    </Suspense>
+  );
+}
+
+function TransactionsContent() {
   const { from, to } = useDateRange();
   const { profile } = useProfile();
   const isAdmin = profile?.role === 'admin';

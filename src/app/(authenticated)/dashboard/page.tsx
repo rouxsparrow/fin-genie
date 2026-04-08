@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { useQueryState, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
@@ -60,6 +60,14 @@ function DashboardSkeleton() {
 // ---- Main Dashboard Page ----
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const { profile, loading: profileLoading } = useProfile();
   const { from, to } = useDateRange();
 
