@@ -13,6 +13,7 @@ import { ReviewScreen } from '@/components/import/review-screen';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 import type { ParseResult } from '@/lib/parser/types';
 
 type ImportPageStatus = 'idle' | 'parsing' | 'review' | 'importing' | 'error';
@@ -144,7 +145,15 @@ export default function ImportPage() {
 
   return (
     <div className="pb-20">
-      <h1 className="mb-8 text-2xl font-bold">Import Statement</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Import Statement</h1>
+        <Link
+          href="/import/history"
+          className="text-sm font-medium underline hover:opacity-70 transition-opacity"
+        >
+          View History
+        </Link>
+      </div>
 
       {state.status === 'idle' && (
         <PdfDropZone

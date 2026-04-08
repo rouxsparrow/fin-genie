@@ -14,7 +14,7 @@ import {
   SelectValue,
   SelectSeparator,
 } from '@/components/ui/select';
-import { extractPattern } from '@/lib/rules/extract-pattern';
+// extractPattern no longer used — pattern pre-fills with full description
 import { createRule } from '@/app/actions/rule-actions';
 import { createCategory } from '@/app/actions/category-actions';
 import { toast } from 'sonner';
@@ -54,7 +54,7 @@ export function RuleCreationPopover({
   // Initialize pattern when popover opens
   useEffect(() => {
     if (open) {
-      setPattern(extractPattern(description));
+      setPattern(description);
       setMatchType('substring');
       setSelectedCategoryId('');
       setIsCreatingCategory(false);
