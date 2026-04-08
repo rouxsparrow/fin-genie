@@ -184,29 +184,31 @@ export async function importTransactions(data: {
       .single();
 
     if (importError || !importRecord) {
-      return { success: false, error: 'Import failed. Please try again.' };
+      console.error('[importTransactions] Import record insert failed:', importError);
+      return { success: false, error: `Import record failed: ${importError?.message ?? 'Unknown error'}` };
     }
 
     // 4. Insert transactions
+    const rows = data.transactions.map((t) => ({
+      household_id: householdId,
+      import_id: importRecord.id,
+      category_id: data.categoryMap?.[t.hash] ?? null,
+      transaction_date: t.date,
+      description: t.description,
+      amount_cents: t.amountCents,
+      is_debit: t.isDebit,
+      transaction_hash: t.hash,
+    }));
+
     const { error: txError } = await supabase
       .from('transactions')
-      .insert(
-        data.transactions.map((t) => ({
-          household_id: householdId,
-          import_id: importRecord.id,
-          category_id: data.categoryMap?.[t.hash] ?? null,
-          transaction_date: t.date,
-          description: t.description,
-          amount_cents: t.amountCents,
-          is_debit: t.isDebit,
-          transaction_hash: t.hash,
-        })),
-      );
+      .insert(rows);
 
     if (txError) {
+      console.error('[importTransactions] Transaction insert failed:', txError);
       // Clean up import record on failure
       await supabase.from('imports').delete().eq('id', importRecord.id);
-      return { success: false, error: 'Import failed. Please try again.' };
+      return { success: false, error: `Transaction insert failed: ${txError.message}` };
     }
 
     // 5. Revalidate import history
@@ -219,7 +221,8 @@ export async function importTransactions(data: {
       transactionCount: data.transactions.length,
       period: `${data.statementPeriodStart} to ${data.statementPeriodEnd}`,
     };
-  } catch {
-    return { success: false, error: 'Import failed. Please try again.' };
+  } catch (err) {
+    console.error('[importTransactions] Uncaught error:', err);
+    return { success: false, error: `Import failed: ${err instanceof Error ? err.message : 'Unknown error'}` };
   }
 }

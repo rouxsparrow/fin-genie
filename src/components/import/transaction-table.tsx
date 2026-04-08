@@ -90,7 +90,7 @@ export function TransactionTable({
                 isUncategorizedSection && !isDuplicate && canExpand;
 
               return (
-                <React.Fragment key={tx.hash}>
+                <React.Fragment key={`${tx.hash}-${index}`}>
                   <TableRow
                     className={cn(
                       'h-12',
@@ -198,7 +198,7 @@ export function TransactionTable({
 
       {/* Mobile cards */}
       <div className="flex flex-col gap-2 md:hidden">
-        {transactions.map((tx) => {
+        {transactions.map((tx, index) => {
           const isDuplicate = duplicateHashes.has(tx.hash);
           const categoryId = categoryMap?.get(tx.hash);
           const category = categoryId
@@ -209,7 +209,7 @@ export function TransactionTable({
             isUncategorizedSection && !isDuplicate && canExpand;
 
           return (
-            <div key={tx.hash}>
+            <div key={`${tx.hash}-${index}`}>
               <TransactionCard
                 transaction={tx}
                 isDuplicate={isDuplicate}
