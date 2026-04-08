@@ -78,8 +78,14 @@ None yet.
 - [Phase 2]: Citibank SG statement layout specifics must be derived from real PDF samples -- blocks bank format JSON config
 - [Phase 2]: `unpdf` coordinate-aware extraction API needs hands-on investigation at phase start
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260408-k03 | Allow uploading multiple PDF files at once on the import page | 2026-04-08 | 48d4003 | [260408-k03](./quick/260408-k03-allow-uploading-multiple-pdf-files-at-on/) |
+
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Phase 04 complete — all plans executed and verified
+Stopped at: Completed quick task 260408-k03: multi-PDF upload
 Resume file: None
