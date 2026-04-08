@@ -39,6 +39,7 @@ export interface Database {
           household_id: string;
           name: string;
           is_system: boolean;
+          exclude_from_stats: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -46,11 +47,13 @@ export interface Database {
           household_id: string;
           name: string;
           is_system: boolean;
+          exclude_from_stats?: boolean;
         };
         Update: {
           household_id?: string;
           name?: string;
           is_system?: boolean;
+          exclude_from_stats?: boolean;
         };
         Relationships: [];
       };

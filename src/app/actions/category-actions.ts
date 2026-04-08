@@ -194,6 +194,7 @@ export async function deleteCategory(categoryId: string) {
 export async function restoreCategory(input: {
   name: string;
   isSystem: boolean;
+  excludeFromStats?: boolean;
 }) {
   const auth = await verifyAdmin();
   if (!auth.authorized) {
@@ -209,6 +210,7 @@ export async function restoreCategory(input: {
       household_id: householdId,
       name: input.name,
       is_system: input.isSystem,
+      exclude_from_stats: input.excludeFromStats ?? false,
     })
     .select()
     .single();
@@ -218,6 +220,64 @@ export async function restoreCategory(input: {
   }
 
   revalidatePath('/categories');
+  return { success: true as const, category };
+}
+
+const toggleCategoryExcludeSchema = z.object({
+  id: z.string().uuid(),
+  excludeFromStats: z.boolean(),
+});
+
+export async function toggleCategoryExclude(input: {
+  id: string;
+  excludeFromStats: boolean;
+}) {
+  const parsed = toggleCategoryExcludeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: parsed.error.errors[0].message };
+  }
+
+  const auth = await verifyAdmin();
+  if (!auth.authorized) {
+    return { success: false as const, error: auth.error };
+  }
+
+  const supabase = await createClient();
+
+  // Verify category exists and is not a system category
+  const { data: existing } = await supabase
+    .from('categories')
+    .select('is_system')
+    .eq('id', parsed.data.id)
+    .single();
+
+  if (!existing) {
+    return { success: false as const, error: 'Category not found.' };
+  }
+
+  if (existing.is_system) {
+    return {
+      success: false as const,
+      error: 'System categories are always excluded and cannot be toggled.',
+    };
+  }
+
+  const { data: category, error } = await supabase
+    .from('categories')
+    .update({ exclude_from_stats: parsed.data.excludeFromStats })
+    .eq('id', parsed.data.id)
+    .select()
+    .single();
+
+  if (error || !category) {
+    return {
+      success: false as const,
+      error: 'Failed to update category exclusion.',
+    };
+  }
+
+  revalidatePath('/categories');
+  revalidatePath('/dashboard');
   return { success: true as const, category };
 }
 

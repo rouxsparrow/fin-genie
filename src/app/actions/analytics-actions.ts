@@ -15,7 +15,11 @@ import {
 // ---------- Types ----------
 
 export type TransactionWithCategory = Transaction & {
-  categories: { name: string; is_system: boolean } | null;
+  categories: {
+    name: string;
+    is_system: boolean;
+    exclude_from_stats: boolean;
+  } | null;
 };
 
 export type DashboardStats = {
@@ -104,22 +108,38 @@ async function verifyAuthenticated() {
 // ---------- Helpers ----------
 
 /**
- * Get the Card Payment system category ID for a household.
- * Transactions with this category are excluded from spending analytics.
+ * Get IDs of all categories that should be excluded from spending analytics.
+ * This includes system categories (e.g., Card Payment) and any user categories
+ * with exclude_from_stats=true (e.g., Rebate, Refund).
  */
-async function getCardPaymentCategoryId(
+async function getExcludedCategoryIds(
   supabase: Awaited<ReturnType<typeof createClient>>,
   householdId: string
-): Promise<string | null> {
+): Promise<string[]> {
   const { data } = await supabase
     .from('categories')
     .select('id')
     .eq('household_id', householdId)
-    .eq('is_system', true)
-    .eq('name', 'Card Payment')
-    .single();
+    .or('is_system.eq.true,exclude_from_stats.eq.true');
 
-  return data?.id ?? null;
+  return (data ?? []).map((c) => c.id);
+}
+
+/**
+ * Apply exclusion filter to a Supabase query.
+ * When excludedIds is non-empty, filters out transactions with those category IDs.
+ */
+function applyExclusionFilter<T>(
+  query: T,
+  excludedIds: string[]
+): T {
+  if (excludedIds.length === 0) return query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (query as any).not(
+    'category_id',
+    'in',
+    `(${excludedIds.join(',')})`
+  ) as T;
 }
 
 // ---------- Server Actions ----------
@@ -144,21 +164,19 @@ export async function fetchDashboardStats(
   const { supabase, profile } = auth;
   const householdId = profile.household_id;
 
-  // Get Card Payment category to exclude
-  const cardPaymentId = await getCardPaymentCategoryId(supabase, householdId);
+  // Get all excluded category IDs (system + user-excluded)
+  const excludedIds = await getExcludedCategoryIds(supabase, householdId);
 
-  // Fetch all debit transactions in range (excluding Card Payment)
+  // Fetch all debit transactions in range (excluding excluded categories)
   let query = supabase
     .from('transactions')
-    .select('*, categories(name, is_system)')
+    .select('*, categories(name, is_system, exclude_from_stats)')
     .eq('household_id', householdId)
     .eq('is_debit', true)
     .gte('transaction_date', from)
     .lte('transaction_date', to);
 
-  if (cardPaymentId) {
-    query = query.neq('category_id', cardPaymentId);
-  }
+  query = applyExclusionFilter(query, excludedIds);
 
   const { data: transactions, error } = await query;
 
@@ -184,9 +202,7 @@ export async function fetchDashboardStats(
     .gte('transaction_date', prevFrom)
     .lte('transaction_date', prevTo);
 
-  if (cardPaymentId) {
-    prevQuery = prevQuery.neq('category_id', cardPaymentId);
-  }
+  prevQuery = applyExclusionFilter(prevQuery, excludedIds);
 
   const { data: prevTxs } = await prevQuery;
   const previousMonthSpending =
@@ -204,9 +220,7 @@ export async function fetchDashboardStats(
     .eq('household_id', householdId)
     .eq('is_debit', true);
 
-  if (cardPaymentId) {
-    allQuery = allQuery.neq('category_id', cardPaymentId);
-  }
+  allQuery = applyExclusionFilter(allQuery, excludedIds);
 
   const { data: allTxs } = await allQuery;
 
@@ -288,19 +302,17 @@ export async function fetchCategoryBreakdown(
 
   const { supabase, profile } = auth;
   const householdId = profile.household_id;
-  const cardPaymentId = await getCardPaymentCategoryId(supabase, householdId);
+  const excludedIds = await getExcludedCategoryIds(supabase, householdId);
 
   let query = supabase
     .from('transactions')
-    .select('amount_cents, category_id, categories(name, is_system)')
+    .select('amount_cents, category_id, categories(name, is_system, exclude_from_stats)')
     .eq('household_id', householdId)
     .eq('is_debit', true)
     .gte('transaction_date', from)
     .lte('transaction_date', to);
 
-  if (cardPaymentId) {
-    query = query.neq('category_id', cardPaymentId);
-  }
+  query = applyExclusionFilter(query, excludedIds);
 
   const { data: transactions, error } = await query;
 
@@ -311,7 +323,7 @@ export async function fetchCategoryBreakdown(
   const txs = (transactions ?? []) as Array<{
     amount_cents: number;
     category_id: string | null;
-    categories: { name: string; is_system: boolean } | null;
+    categories: { name: string; is_system: boolean; exclude_from_stats: boolean } | null;
   }>;
 
   // Group by category
@@ -365,7 +377,7 @@ export async function fetchMonthlyTrend(
 
   const { supabase, profile } = auth;
   const householdId = profile.household_id;
-  const cardPaymentId = await getCardPaymentCategoryId(supabase, householdId);
+  const excludedIds = await getExcludedCategoryIds(supabase, householdId);
 
   let query = supabase
     .from('transactions')
@@ -375,9 +387,7 @@ export async function fetchMonthlyTrend(
     .gte('transaction_date', from)
     .lte('transaction_date', to);
 
-  if (cardPaymentId) {
-    query = query.neq('category_id', cardPaymentId);
-  }
+  query = applyExclusionFilter(query, excludedIds);
 
   const { data: transactions, error } = await query;
 
@@ -435,13 +445,18 @@ export async function fetchRecentTransactions(
   const { supabase, profile } = auth;
   const householdId = profile.household_id;
 
+  // Exclude system + user-excluded categories from recent transactions
+  const excludedIds = await getExcludedCategoryIds(supabase, householdId);
+
   let query = supabase
     .from('transactions')
-    .select('*, categories(name, is_system)', { count: 'exact' })
+    .select('*, categories(name, is_system, exclude_from_stats)', { count: 'exact' })
     .eq('household_id', householdId)
     .eq('is_debit', true)
     .gte('transaction_date', from)
     .lte('transaction_date', to);
+
+  query = applyExclusionFilter(query, excludedIds);
 
   if (categoryId) {
     query = query.eq('category_id', categoryId);
@@ -497,7 +512,7 @@ export async function fetchTransactionList(params: {
 
   let query = supabase
     .from('transactions')
-    .select('*, categories(name, is_system)', { count: 'exact' })
+    .select('*, categories(name, is_system, exclude_from_stats)', { count: 'exact' })
     .eq('household_id', householdId)
     .gte('transaction_date', from)
     .lte('transaction_date', to);
