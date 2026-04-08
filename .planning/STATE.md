@@ -83,9 +83,10 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260408-k03 | Allow uploading multiple PDF files at once on the import page | 2026-04-08 | 48d4003 | [260408-k03](./quick/260408-k03-allow-uploading-multiple-pdf-files-at-on/) |
+| 260408-mvw | Add option to set category to be excluded from dashboard stats | 2026-04-08 | bba154a | [260408-mvw](./quick/260408-mvw-add-option-to-set-rule-to-be-excluded-fr/) |
 
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Completed quick task 260408-k03: multi-PDF upload
+Stopped at: Completed quick task 260408-mvw: exclude category from stats
 Resume file: None
