@@ -11,6 +11,7 @@ import {
   updateCategory,
   deleteCategory,
   restoreCategory,
+  toggleCategoryExclude,
 } from '@/app/actions/category-actions';
 import type { Category } from '@/lib/types/database';
 
@@ -55,6 +56,42 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
     }
   }
 
+  async function handleToggleExclude(
+    categoryId: string,
+    excludeFromStats: boolean,
+  ) {
+    // Optimistic update
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === categoryId ? { ...c, exclude_from_stats: excludeFromStats } : c,
+      ),
+    );
+
+    const result = await toggleCategoryExclude({
+      id: categoryId,
+      excludeFromStats,
+    });
+
+    if (result.success) {
+      const name = categories.find((c) => c.id === categoryId)?.name ?? '';
+      toast(
+        excludeFromStats
+          ? `Category '${name}' excluded from stats.`
+          : `Category '${name}' included in stats.`,
+      );
+    } else {
+      // Revert optimistic update
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === categoryId
+            ? { ...c, exclude_from_stats: !excludeFromStats }
+            : c,
+        ),
+      );
+      toast.error(result.error);
+    }
+  }
+
   async function handleDelete(category: Category) {
     // Optimistic remove
     setCategories((prev) => prev.filter((c) => c.id !== category.id));
@@ -70,6 +107,7 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
             const restoreResult = await restoreCategory({
               name: category.name,
               isSystem: category.is_system,
+              excludeFromStats: category.exclude_from_stats,
             });
             if (restoreResult.success) {
               setCategories((prev) =>
@@ -159,6 +197,9 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
           onCancelEdit={() => setEditingId(null)}
           onSave={(name) => handleSaveEdit(category.id, name)}
           onDelete={() => handleDelete(category)}
+          onToggleExclude={(excludeFromStats) =>
+            handleToggleExclude(category.id, excludeFromStats)
+          }
           isLast={!isAdding && index === categories.length - 1}
         />
       ))}

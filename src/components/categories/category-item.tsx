@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Check, X, Pencil, Trash2, Lock } from 'lucide-react';
+import { Check, X, Pencil, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,6 +19,7 @@ interface CategoryItemProps {
   onCancelEdit: () => void;
   onSave: (name: string) => void;
   onDelete: () => void;
+  onToggleExclude: (excludeFromStats: boolean) => void;
   isLast: boolean;
 }
 
@@ -29,6 +30,7 @@ export function CategoryItem({
   onCancelEdit,
   onSave,
   onDelete,
+  onToggleExclude,
   isLast,
 }: CategoryItemProps) {
   const [editName, setEditName] = useState(category.name);
@@ -135,6 +137,36 @@ export function CategoryItem({
         </TooltipProvider>
       ) : (
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:opacity-0 max-md:opacity-100">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="neutral"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() =>
+                    onToggleExclude(!category.exclude_from_stats)
+                  }
+                  aria-label={
+                    category.exclude_from_stats
+                      ? 'Include in dashboard stats'
+                      : 'Exclude from dashboard stats'
+                  }
+                >
+                  {category.exclude_from_stats ? (
+                    <EyeOff size={16} />
+                  ) : (
+                    <Eye size={16} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {category.exclude_from_stats
+                  ? 'Excluded from dashboard stats'
+                  : 'Included in dashboard stats'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant="neutral"
             size="icon"
