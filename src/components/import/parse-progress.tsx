@@ -5,15 +5,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface ParseProgressProps {
   fileName: string;
+  filePosition?: { current: number; total: number };
 }
 
-export function ParseProgress({ fileName }: ParseProgressProps) {
+export function ParseProgress({ fileName, filePosition }: ParseProgressProps) {
+  const label =
+    filePosition && filePosition.total > 1
+      ? `Parsing file ${filePosition.current} of ${filePosition.total}: ${fileName}`
+      : `Uploading ${fileName}...`;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Upload indicator */}
       <div className="flex items-center gap-2">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm font-medium">Uploading {fileName}...</span>
+        <span className="text-sm font-medium">{label}</span>
       </div>
 
       {/* Skeleton mimicking review layout */}

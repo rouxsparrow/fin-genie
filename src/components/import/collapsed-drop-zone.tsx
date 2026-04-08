@@ -6,12 +6,14 @@ interface CollapsedDropZoneProps {
   fileName: string;
   transactionCount: number;
   onUploadAnother: () => void;
+  uploadAnotherLabel?: string;
 }
 
 export function CollapsedDropZone({
   fileName,
   transactionCount,
   onUploadAnother,
+  uploadAnotherLabel = 'Upload another',
 }: CollapsedDropZoneProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-base border-2 border-border bg-secondary-background p-4">
@@ -26,7 +28,7 @@ export function CollapsedDropZone({
         onClick={onUploadAnother}
         className="text-sm font-medium text-main underline-offset-4 hover:underline"
       >
-        Upload another
+        {uploadAnotherLabel}
       </button>
     </div>
   );

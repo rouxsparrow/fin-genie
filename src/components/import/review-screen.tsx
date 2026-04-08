@@ -22,6 +22,7 @@ interface ReviewScreenProps {
   onUploadAnother: () => void;
   isImporting: boolean;
   onCategoryMapChange?: (map: Record<string, string>) => void;
+  uploadAnotherLabel?: string;
 }
 
 export function ReviewScreen({
@@ -32,6 +33,7 @@ export function ReviewScreen({
   onUploadAnother,
   isImporting,
   onCategoryMapChange,
+  uploadAnotherLabel,
 }: ReviewScreenProps) {
   const duplicateSet = useMemo(
     () => new Set(duplicateHashes),
@@ -164,6 +166,7 @@ export function ReviewScreen({
         fileName={fileName}
         transactionCount={parseResult.transactions.length}
         onUploadAnother={onUploadAnother}
+        uploadAnotherLabel={uploadAnotherLabel}
       />
 
       {/* Statement summary */}
