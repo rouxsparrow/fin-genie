@@ -42,7 +42,7 @@ export function EmptyState({
           <div className="h-2" />
           <p className="text-base font-medium opacity-60">{body}</p>
           <div className="h-6" />
-          {ctaLabel && !altText && (
+          {ctaLabel && (
             <>
               {ctaDisabled ? (
                 <TooltipProvider>
@@ -67,7 +67,10 @@ export function EmptyState({
             </>
           )}
           {altText && (
-            <p className="text-sm font-medium italic">{altText}</p>
+            <>
+              {ctaLabel && <div className="h-3" />}
+              <p className="text-sm font-medium opacity-50">{altText}</p>
+            </>
           )}
         </CardContent>
       </Card>

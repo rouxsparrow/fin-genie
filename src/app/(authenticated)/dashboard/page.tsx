@@ -163,11 +163,14 @@ export default function DashboardPage() {
     );
   }
 
-  // Empty state
+  // Empty state — keep DateRangeSelector so users can change the date range
   if (isEmpty) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <DateRangeSelector />
+        </div>
         {profile?.role === 'admin' ? (
           <EmptyState
             icon={<BarChart3 size={48} />}
@@ -175,12 +178,14 @@ export default function DashboardPage() {
             body="Upload your first bank statement to start tracking where your money goes."
             ctaLabel="Import Statement"
             ctaHref="/import"
+            altText="Or try a different date range above."
           />
         ) : (
           <EmptyState
             icon={<BarChart3 size={48} />}
             heading="No spending data yet"
             body="Ask your admin to import a statement to start viewing spending data."
+            altText="Or try a different date range above."
           />
         )}
       </div>
