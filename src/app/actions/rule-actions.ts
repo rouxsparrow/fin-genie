@@ -362,15 +362,29 @@ export async function recategorizeAll() {
   // Apply updates
   for (const [catId, txIds] of updateGroups) {
     if (catId === '__null__') {
-      await supabase
+      const { error } = await supabase
         .from('transactions')
         .update({ category_id: null })
         .in('id', txIds);
+
+      if (error) {
+        return {
+          success: false as const,
+          error: `Failed to clear categories for ${txIds.length} transaction(s): ${error.message}`,
+        };
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from('transactions')
         .update({ category_id: catId })
         .in('id', txIds);
+
+      if (error) {
+        return {
+          success: false as const,
+          error: `Failed to assign category ${catId} to ${txIds.length} transaction(s): ${error.message}`,
+        };
+      }
     }
     updated += txIds.length;
   }

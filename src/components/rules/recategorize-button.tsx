@@ -23,7 +23,7 @@ export function RecategorizeButton() {
         );
       }
     } else {
-      toast.error('Re-categorization failed. Please try again.');
+      toast.error(result.error || 'Re-categorization failed. Please try again.');
     }
   }
 

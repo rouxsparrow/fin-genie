@@ -37,6 +37,110 @@ export function parseAmount(raw: string): {
   };
 }
 
+function differenceInCalendarDaysSafe(later: Date, earlier: Date): number {
+  return Math.round(
+    (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24),
+  );
+}
+
+function inferFallbackPeriod(
+  dateStrs: string[],
+  dateFormat: string,
+  hintDate: Date,
+): { periodStart: Date; periodEnd: Date } {
+  const hintYear = hintDate.getFullYear();
+  const candidates: Array<{
+    periodStart: Date;
+    periodEnd: Date;
+    hasFutureDates: boolean;
+    exceedsTypicalWindow: boolean;
+    spanDays: number;
+    gapToHintDays: number;
+  }> = [];
+
+  for (let cutoffMonth = 0; cutoffMonth <= 12; cutoffMonth++) {
+    const resolvedDates: Date[] = [];
+    let invalidCandidate = false;
+
+    for (const dateStr of dateStrs) {
+      const sameYearProbe = parse(
+        `${dateStr} ${hintYear}`,
+        `${dateFormat} yyyy`,
+        new Date(),
+      );
+
+      if (isNaN(sameYearProbe.getTime())) {
+        invalidCandidate = true;
+        break;
+      }
+
+      const resolvedYear =
+        sameYearProbe.getMonth() + 1 > cutoffMonth ? hintYear - 1 : hintYear;
+      const resolvedDate = parse(
+        `${dateStr} ${resolvedYear}`,
+        `${dateFormat} yyyy`,
+        new Date(),
+      );
+
+      if (isNaN(resolvedDate.getTime())) {
+        invalidCandidate = true;
+        break;
+      }
+
+      resolvedDates.push(resolvedDate);
+    }
+
+    if (invalidCandidate || resolvedDates.length === 0) {
+      continue;
+    }
+
+    resolvedDates.sort((a, b) => a.getTime() - b.getTime());
+    const periodStart = resolvedDates[0];
+    const periodEnd = resolvedDates[resolvedDates.length - 1];
+    const spanDays = differenceInCalendarDaysSafe(periodEnd, periodStart);
+    const gapToHintDays = differenceInCalendarDaysSafe(hintDate, periodEnd);
+
+    candidates.push({
+      periodStart,
+      periodEnd,
+      hasFutureDates: gapToHintDays < 0,
+      exceedsTypicalWindow: spanDays > 62,
+      spanDays,
+      gapToHintDays,
+    });
+  }
+
+  candidates.sort((a, b) => {
+    if (a.hasFutureDates !== b.hasFutureDates) {
+      return a.hasFutureDates ? 1 : -1;
+    }
+    if (a.exceedsTypicalWindow !== b.exceedsTypicalWindow) {
+      return a.exceedsTypicalWindow ? 1 : -1;
+    }
+    if (a.spanDays !== b.spanDays) {
+      return a.spanDays - b.spanDays;
+    }
+
+    const aGap = a.gapToHintDays < 0 ? Number.MAX_SAFE_INTEGER : a.gapToHintDays;
+    const bGap = b.gapToHintDays < 0 ? Number.MAX_SAFE_INTEGER : b.gapToHintDays;
+
+    if (aGap !== bGap) {
+      return aGap - bGap;
+    }
+
+    return b.periodEnd.getTime() - a.periodEnd.getTime();
+  });
+
+  if (candidates.length === 0) {
+    throw new Error('Could not infer fallback statement period');
+  }
+
+  return {
+    periodStart: candidates[0].periodStart,
+    periodEnd: candidates[0].periodEnd,
+  };
+}
+
 /**
  * Infer the full date (with year) from a date string like "15 MAR"
  * using the statement period boundaries for cross-year resolution.
@@ -128,7 +232,6 @@ export function parseStatementText(
 
   let periodStart: Date;
   let periodEnd: Date;
-  let usingFallback = false;
 
   if (periodStartStr && periodEndStr) {
     // 3a. Parse period dates from explicit statement period
@@ -144,71 +247,64 @@ export function parseStatementText(
     );
   } else if (config.period_fallback?.strategy === 'infer_from_transactions') {
     // 3b. Fallback: infer period from transaction dates
-    // First, extract a year hint from the document
-    let hintYear: number | null = null;
+    // Real Citibank PDFs often have image-only summary pages, so we may need to infer
+    // the period from transaction rows plus a due-date year hint instead.
+    let hintDate: Date | null = null;
 
     if (config.period_fallback.year_hint_pattern) {
       const hintRegex = new RegExp(config.period_fallback.year_hint_pattern);
       for (const line of allLines) {
         const hintMatch = line.match(hintRegex);
         if (hintMatch) {
-          const hintDate = parse(
+          const parsedHintDate = parse(
             hintMatch[1].trim(),
             config.period_fallback.year_hint_format,
             new Date(),
           );
-          if (!isNaN(hintDate.getTime())) {
-            hintYear = hintDate.getFullYear();
+          if (!isNaN(parsedHintDate.getTime())) {
+            hintDate = parsedHintDate;
             break;
           }
         }
       }
     }
 
-    if (!hintYear) {
-      hintYear = new Date().getFullYear();
+    if (!hintDate) {
+      hintDate = new Date();
     }
 
     // Collect all transaction dates from the document to determine the range
     const txRegexForDates = new RegExp(config.transaction.line_pattern);
-    const txDates: Date[] = [];
+    const txDateStrs: string[] = [];
 
     for (const line of allLines) {
       const match = line.trim().match(txRegexForDates);
       if (match) {
-        const dateStr = match[1].trim();
-        // Parse with hint year first, then try hint year - 1 for cross-year
-        const withHintYear = parse(
-          `${dateStr} ${hintYear}`,
-          'dd MMM yyyy',
-          new Date(),
-        );
-        if (!isNaN(withHintYear.getTime())) {
-          txDates.push(withHintYear);
-        }
+        txDateStrs.push(match[1].trim());
       }
     }
 
-    if (txDates.length === 0) {
+    if (txDateStrs.length === 0) {
       return {
         code: 'no_transactions',
         message: 'No transaction dates found to infer statement period',
       };
     }
 
-    // Sort dates and use min/max
-    txDates.sort((a, b) => a.getTime() - b.getTime());
-    const minDate = txDates[0];
-    const maxDate = txDates[txDates.length - 1];
-
-    // Handle cross-year: if min month > max month, min is from previous year
-    if (minDate.getMonth() > maxDate.getMonth()) {
-      minDate.setFullYear(minDate.getFullYear() - 1);
+    try {
+      const inferredPeriod = inferFallbackPeriod(
+        txDateStrs,
+        config.transaction.date_format,
+        hintDate,
+      );
+      periodStart = inferredPeriod.periodStart;
+      periodEnd = inferredPeriod.periodEnd;
+    } catch {
+      return {
+        code: 'parse_failed',
+        message: 'Could not infer statement period from transaction dates',
+      };
     }
-
-    periodStart = minDate;
-    periodEnd = maxDate;
-    usingFallback = true;
   } else {
     return {
       code: 'unsupported_format',

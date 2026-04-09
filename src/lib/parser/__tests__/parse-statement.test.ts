@@ -316,6 +316,60 @@ describe('parseStatementText', () => {
     assert.strictEqual(busTx!.isDebit, true);
   });
 
+  it('infers cross-year fallback period for Dec-Jan statements', () => {
+    const configWithFallback: BankFormatConfig = {
+      ...citibankConfig,
+      period_fallback: {
+        year_hint_pattern: 'Payment Due Date:\\s+(.+?)\\s*$',
+        year_hint_format: 'MMMM d, yyyy',
+        strategy: 'infer_from_transactions',
+      },
+      section_markers: undefined,
+      skip_patterns: [
+        ...citibankConfig.skip_patterns,
+        '^XXXX-XXXX-XXXX-\\d{4}$',
+        'CITI CASH BACK',
+        'TRANSACTIONS FOR',
+        'ALL TRANSACTIONS BILLED',
+        'DATE\\s+DESCRIPTION\\s+AMOUNT',
+      ],
+    };
+
+    const crossYearPage = [
+      'CITI CASH BACK PLUS MASTERCARD 5425 5045 0451 4636 Payment Due Date: February 16, 2026\n' +
+      'DATE DESCRIPTION AMOUNT (SGD)\n' +
+      'TRANSACTIONS FOR CITI CASH BACK PLUS MASTERCARD\n' +
+      'ALL TRANSACTIONS BILLED IN SINGAPORE DOLLARS\n' +
+      '28 DEC NTUC FAIRPRICE SINGAPORE SG 45.20\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '31 DEC GRAB SINGAPORE SG 12.50\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '02 JAN HAWKER CENTRE SINGAPORE SG 8.30\n' +
+      'XXXX-XXXX-XXXX-0016\n' +
+      '12 JAN UNIQLO SINGAPORE SG 59.90\n' +
+      'XXXX-XXXX-XXXX-0016',
+    ];
+
+    const result = parseStatementText(crossYearPage, configWithFallback);
+    assert.strictEqual('transactions' in result, true);
+    const parsed = result as ParseResult;
+
+    assert.strictEqual(parsed.statementPeriodStart, '2025-12-28');
+    assert.strictEqual(parsed.statementPeriodEnd, '2026-01-12');
+
+    const ntucTx = parsed.transactions.find((t) =>
+      t.description.includes('NTUC FAIRPRICE'),
+    );
+    const uniqloTx = parsed.transactions.find((t) =>
+      t.description.includes('UNIQLO'),
+    );
+
+    assert.ok(ntucTx, 'Should find December transaction');
+    assert.ok(uniqloTx, 'Should find January transaction');
+    assert.strictEqual(ntucTx!.date, '2025-12-28');
+    assert.strictEqual(uniqloTx!.date, '2026-01-12');
+  });
+
   it('skips card number continuation lines with XXXX pattern', () => {
     const configWithSkip: BankFormatConfig = {
       ...citibankConfig,
