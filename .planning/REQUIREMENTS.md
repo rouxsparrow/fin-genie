@@ -7,10 +7,10 @@
 
 ### Dashboard Analysis
 
-- [ ] **ANLC-07**: User can compare the selected date range against the previous equivalent period from the dashboard summary.
-- [ ] **ANLC-08**: User can drill from dashboard insight cards or charts into a filtered transaction view without re-entering filters.
-- [ ] **ANLC-09**: User can see clearer dashboard breakdowns for top categories, merchants, or spending concentration within the selected period.
-- [ ] **ANLC-10**: User can keep dashboard filters in sync across charts, recent transactions, and linked navigation states.
+- [x] **ANLC-07**: User can compare the selected date range against the previous equivalent period from the dashboard summary.
+- [x] **ANLC-08**: User can drill from dashboard insight cards or charts into a filtered transaction view without re-entering filters.
+- [x] **ANLC-09**: User can see clearer dashboard breakdowns for top categories, merchants, or spending concentration within the selected period.
+- [x] **ANLC-10**: User can keep dashboard filters in sync across charts, recent transactions, and linked navigation states.
 
 ### Transactions Experience
 
@@ -63,10 +63,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANLC-07 | Phase 5 | Pending |
-| ANLC-08 | Phase 5 | Pending |
-| ANLC-09 | Phase 5 | Pending |
-| ANLC-10 | Phase 5 | Pending |
+| ANLC-07 | Phase 5 | Complete |
+| ANLC-08 | Phase 5 | Complete |
+| ANLC-09 | Phase 5 | Complete |
+| ANLC-10 | Phase 5 | Complete |
 | TXNS-01 | Phase 6 | Pending |
 | TXNS-02 | Phase 6 | Pending |
 | TXNS-03 | Phase 6 | Pending |
@@ -87,4 +87,4 @@
 
 ---
 *Requirements defined: 2026-04-09*
-*Last updated: 2026-04-09 after initial milestone definition*
+*Last updated: 2026-04-09 after Phase 5 execution*

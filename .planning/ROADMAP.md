@@ -38,9 +38,9 @@ Full details archived: `.planning/milestones/v1.0-ROADMAP.md`
 **Requirements**: ANLC-07, ANLC-08, ANLC-09, ANLC-10
 **Plans**: 3 plans
 Plans:
-- [ ] 05-01-PLAN.md — Establish shared dashboard query state, month navigation, and comparison-ready analytics contracts
-- [ ] 05-02-PLAN.md — Rebuild cards and charts around adaptive single-month, multi-month, and custom dashboard modes
-- [ ] 05-03-PLAN.md — Replace the preview list with an embedded explorer and add in-page drill-down modals
+- [x] 05-01-PLAN.md — Establish shared dashboard query state, month navigation, and comparison-ready analytics contracts
+- [x] 05-02-PLAN.md — Rebuild cards and charts around adaptive single-month, multi-month, and custom dashboard modes
+- [x] 05-03-PLAN.md — Replace the preview list with an embedded explorer and add in-page drill-down modals
 **Success Criteria** (what must be TRUE):
 1. Users can compare the selected period against the previous equivalent period from the dashboard without manual calculation.
 2. Users can click from summary cards or charts into a transaction view with matching filters already applied.
@@ -74,6 +74,6 @@ Plans:
 | 2. PDF Import Pipeline | v1.0 | 4/4 | Complete | 2026-04-07 |
 | 3. Categorization Engine | v1.0 | 4/4 | Complete | 2026-04-07 |
 | 4. Dashboard & Analytics | v1.0 | 3/3 | Complete | 2026-04-08 |
-| 5. Dashboard Analysis Enhancements | v1.1 | 0/0 | Pending | — |
+| 5. Dashboard Analysis Enhancements | v1.1 | 3/3 | Complete | 2026-04-09 |
 | 6. Transactions Exploration UX | v1.1 | 0/0 | Pending | — |
 | 7. Rules & Categories Management UX | v1.1 | 0/0 | Pending | — |

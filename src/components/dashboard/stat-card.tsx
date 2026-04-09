@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import type { ReactNode } from "react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export interface ComparisonItem {
   text: string;
-  direction: 'up' | 'down' | 'neutral';
+  direction: "up" | "down" | "neutral";
 }
 
 export interface StatCardProps {
@@ -16,20 +17,22 @@ export interface StatCardProps {
   comparison?: ComparisonItem[];
   subtext?: string;
   subtextClassName?: string;
+  footerContent?: ReactNode;
+  onClick?: () => void;
 }
 
 const directionConfig = {
   up: {
     Icon: TrendingUp,
-    color: 'text-[#d97706]', // amber-600 for increase (spending went up)
+    color: "text-[#d97706]",
   },
   down: {
     Icon: TrendingDown,
-    color: 'text-[#16a34a]', // green-600 for decrease (spending went down)
+    color: "text-[#16a34a]",
   },
   neutral: {
     Icon: Minus,
-    color: 'text-foreground opacity-60',
+    color: "text-foreground opacity-60",
   },
 };
 
@@ -40,28 +43,34 @@ export function StatCard({
   comparison,
   subtext,
   subtextClassName,
+  footerContent,
+  onClick,
 }: StatCardProps) {
-  return (
-    <Card>
+  const cardContent = (
+    <Card
+      className={cn(
+        onClick &&
+          "transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
+      )}
+    >
       <CardHeader className="pb-0">
         <p className="text-sm font-medium opacity-60">{label}</p>
       </CardHeader>
-      <CardContent className="flex flex-col gap-1 pt-0">
-        <p
-          className={cn(
-            'text-2xl font-bold tabular-nums',
-            valueClassName
-          )}
-        >
+      <CardContent className="flex flex-col gap-2 pt-0">
+        <p className={cn("text-2xl font-bold tabular-nums", valueClassName)}>
           {value}
         </p>
 
         {comparison && comparison.length > 0 && (
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             {comparison.map((item, index) => {
               const { Icon, color } = directionConfig[item.direction];
+
               return (
-                <div key={index} className={cn('flex items-center gap-1', color)}>
+                <div
+                  key={index}
+                  className={cn("flex items-center gap-1", color)}
+                >
                   <Icon className="h-3.5 w-3.5" />
                   <span className="text-sm font-medium">{item.text}</span>
                 </div>
@@ -71,16 +80,28 @@ export function StatCard({
         )}
 
         {subtext && (
-          <p
-            className={cn(
-              'text-base font-medium',
-              subtextClassName
-            )}
-          >
+          <p className={cn("text-base font-medium", subtextClassName)}>
             {subtext}
           </p>
         )}
+
+        {footerContent}
       </CardContent>
     </Card>
+  );
+
+  if (!onClick) {
+    return cardContent;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left"
+      aria-label={label}
+    >
+      {cardContent}
+    </button>
   );
 }

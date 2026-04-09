@@ -1,55 +1,75 @@
-'use client';
+"use client";
 
-import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
-import { BarChart3 } from 'lucide-react';
-import { useQueryState, parseAsString } from 'nuqs';
-import { toast } from 'sonner';
-
-import { useProfile } from '@/lib/hooks/use-profile';
-import { useDateRange } from '@/lib/hooks/use-date-range';
-import { EmptyState } from '@/components/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import { DateRangeSelector } from '@/components/dashboard/date-range-selector';
-import { StatCardGrid } from '@/components/dashboard/stat-card-grid';
-import { CategoryDonutChart } from '@/components/dashboard/category-donut-chart';
-import { MonthlyBarChart } from '@/components/dashboard/monthly-bar-chart';
-import { RecentTransactions } from '@/components/dashboard/recent-transactions';
-import { CategoryFilterBadge } from '@/components/dashboard/category-filter-badge';
 import {
-  fetchDashboardStats,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BarChart3 } from "lucide-react";
+import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
+import { CategoryDonutChart } from "@/components/dashboard/category-donut-chart";
+import { DateRangeSelector } from "@/components/dashboard/date-range-selector";
+import { MonthlyBarChart } from "@/components/dashboard/monthly-bar-chart";
+import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+import { StatCardGrid } from "@/components/dashboard/stat-card-grid";
+import {
   fetchCategoryBreakdown,
+  fetchCategoryTrends,
+  fetchDashboardDrilldownTransactions,
+  fetchDashboardStats,
   fetchMonthlyTrend,
-  fetchRecentTransactions,
-  type DashboardStats,
+  fetchTransactionList,
   type CategoryBreakdownItem,
+  type CategoryTrendItem,
+  type DashboardStats,
   type MonthlyTrendItem,
   type TransactionWithCategory,
-} from '@/app/actions/analytics-actions';
+} from "@/app/actions/analytics-actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useDateRange } from "@/lib/hooks/use-date-range";
+import { useProfile } from "@/lib/hooks/use-profile";
 
-// ---- Loading Skeletons ----
+const PAGE_SIZE = 10;
+
+type DrilldownType =
+  | "top-category"
+  | "largest-transactions"
+  | "subscriptions"
+  | null;
 
 function DashboardSkeleton() {
   return (
     <div className="space-y-8">
-      {/* Stat card skeletons */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[120px] w-full" />
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-[140px] w-full" />
         ))}
       </div>
 
-      {/* Chart skeletons */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Skeleton className="h-[320px] w-full" />
         <Skeleton className="h-[320px] w-full" />
       </div>
 
-      {/* Recent transactions skeleton */}
       <Card>
         <CardContent className="p-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full mb-1" />
+          <Skeleton className="mb-4 h-10 w-full" />
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="mb-2 h-12 w-full" />
           ))}
         </CardContent>
       </Card>
@@ -57,7 +77,66 @@ function DashboardSkeleton() {
   );
 }
 
-// ---- Main Dashboard Page ----
+function formatCurrency(cents: number, isDebit: boolean = true) {
+  const formatted = new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency: "SGD",
+  }).format(cents / 100);
+
+  return isDebit ? formatted : `(${formatted})`;
+}
+
+function ModalTransactionList({
+  transactions,
+}: {
+  transactions: TransactionWithCategory[];
+}) {
+  if (transactions.length === 0) {
+    return (
+      <div className="flex min-h-[220px] items-center justify-center">
+        <p className="text-base font-medium opacity-60">
+          No matching transactions.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {transactions.map((transaction) => (
+        <div
+          key={transaction.id}
+          className="rounded-base border-2 border-border bg-secondary-background p-4"
+        >
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-base font-bold">
+                {transaction.description}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium opacity-60">
+                  {format(parseISO(transaction.transaction_date), "d MMM yyyy")}
+                </span>
+                {transaction.categories && (
+                  <Badge
+                    variant={
+                      transaction.categories.is_system ? "neutral" : "default"
+                    }
+                  >
+                    {transaction.categories.name}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <p className="shrink-0 text-lg font-bold tabular-nums">
+              {formatCurrency(transaction.amount_cents, transaction.is_debit)}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   return (
@@ -69,117 +148,270 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { profile, loading: profileLoading } = useProfile();
-  const { from, to } = useDateRange();
-
-  // Category filter via URL param
+  const { from, to, analysisMode } = useDateRange();
   const [categoryId, setCategoryId] = useQueryState(
-    'category',
-    parseAsString.withDefault('')
+    "category",
+    parseAsString.withDefault(""),
   );
-  const activeCategoryId = categoryId || null;
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [search, setSearch] = useQueryState(
+    "search",
+    parseAsString.withDefault(""),
+  );
+  const [sort, setSort] = useQueryState(
+    "sort",
+    parseAsString.withDefault("transaction_date"),
+  );
+  const [dir, setDir] = useQueryState("dir", parseAsString.withDefault("desc"));
 
-  // Dashboard data state
+  const activeCategoryId = categoryId || null;
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [breakdown, setBreakdown] = useState<CategoryBreakdownItem[]>([]);
-  const [trend, setTrend] = useState<MonthlyTrendItem[]>([]);
-  const [recentTxs, setRecentTxs] = useState<TransactionWithCategory[]>([]);
-  const [recentTotal, setRecentTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [timeSeries, setTimeSeries] = useState<MonthlyTrendItem[]>([]);
+  const [categoryTrends, setCategoryTrends] = useState<CategoryTrendItem[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithCategory[]>(
+    [],
+  );
+  const [transactionTotal, setTransactionTotal] = useState(0);
+  const [transactionTotalPages, setTransactionTotalPages] = useState(1);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
-  const isInitialLoad = useRef(true);
+  const [activeDrilldown, setActiveDrilldown] = useState<DrilldownType>(null);
+  const [drilldownTransactions, setDrilldownTransactions] = useState<
+    TransactionWithCategory[]
+  >([]);
+  const [drilldownLoading, setDrilldownLoading] = useState(false);
+  const isInitialAnalyticsLoad = useRef(true);
 
-  // Find the active category name for the filter badge
-  const activeCategoryName =
-    activeCategoryId && breakdown.length > 0
-      ? breakdown.find((b) => b.categoryId === activeCategoryId)
-          ?.categoryName ?? null
-      : null;
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadDashboardData = useCallback(async () => {
-    if (isInitialLoad.current) {
-      setLoading(true);
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [from, to, activeCategoryId, debouncedSearch, sort, dir, setPage]);
+
+  const activeCategoryName = useMemo(
+    () =>
+      activeCategoryId
+        ? (breakdown.find((item) => item.categoryId === activeCategoryId)
+            ?.categoryName ?? null)
+        : null,
+    [activeCategoryId, breakdown],
+  );
+
+  const loadAnalytics = useCallback(async () => {
+    if (isInitialAnalyticsLoad.current) {
+      setAnalyticsLoading(true);
     } else {
       setTransitioning(true);
     }
 
     try {
-      const [statsResult, breakdownResult, trendResult, recentResult] =
-        await Promise.all([
-          fetchDashboardStats(from, to),
-          fetchCategoryBreakdown(from, to),
-          fetchMonthlyTrend(from, to),
-          fetchRecentTransactions(from, to, 10, activeCategoryId ?? undefined),
-        ]);
+      const chartPromise =
+        analysisMode === "single-month"
+          ? fetchCategoryTrends(from, to)
+          : fetchMonthlyTrend(
+              from,
+              to,
+              analysisMode === "custom-range" ? "auto" : "month",
+            );
 
-      if (statsResult.success) {
-        setStats(statsResult.data);
-      } else {
-        toast('Could not load spending data. Please try refreshing.');
+      const [statsResult, breakdownResult, chartResult] = await Promise.all([
+        fetchDashboardStats(from, to),
+        fetchCategoryBreakdown(from, to),
+        chartPromise,
+      ]);
+
+      if (!statsResult.success) {
+        toast("Could not load spending data. Please try refreshing.");
+        return;
       }
+
+      setStats(statsResult.data);
 
       if (breakdownResult.success) {
         setBreakdown(breakdownResult.data);
+      } else {
+        setBreakdown([]);
       }
 
-      if (trendResult.success) {
-        setTrend(trendResult.data);
-      }
-
-      if (recentResult.success) {
-        setRecentTxs(recentResult.data.transactions);
-        setRecentTotal(recentResult.data.total);
+      if (analysisMode === "single-month") {
+        if (chartResult.success) {
+          setCategoryTrends(chartResult.data as CategoryTrendItem[]);
+        } else {
+          setCategoryTrends([]);
+        }
+        setTimeSeries([]);
+      } else {
+        if (chartResult.success) {
+          setTimeSeries(chartResult.data as MonthlyTrendItem[]);
+        } else {
+          setTimeSeries([]);
+        }
+        setCategoryTrends([]);
       }
     } catch {
-      toast('Could not load spending data. Please try refreshing.');
+      toast("Could not load spending data. Please try refreshing.");
     } finally {
-      setLoading(false);
+      setAnalyticsLoading(false);
       setTransitioning(false);
-      isInitialLoad.current = false;
+      isInitialAnalyticsLoad.current = false;
     }
-  }, [from, to, activeCategoryId]);
+  }, [analysisMode, from, to]);
+
+  const loadTransactions = useCallback(async () => {
+    setTransactionsLoading(true);
+
+    try {
+      const result = await fetchTransactionList({
+        from,
+        to,
+        page,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+        categoryId: activeCategoryId ?? undefined,
+        sortBy: sort || "transaction_date",
+        sortDir: (dir as "asc" | "desc") || "desc",
+        spendingOnly: true,
+        excludeExcludedCategories: true,
+      });
+
+      if (!result.success) {
+        toast("Could not load spending data. Please try refreshing.");
+        return;
+      }
+
+      setTransactions(result.data.transactions);
+      setTransactionTotal(result.data.total);
+      setTransactionTotalPages(result.data.totalPages);
+    } catch {
+      toast("Could not load spending data. Please try refreshing.");
+    } finally {
+      setTransactionsLoading(false);
+    }
+  }, [activeCategoryId, debouncedSearch, dir, from, page, sort, to]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    loadAnalytics();
+  }, [loadAnalytics]);
 
-  // Handle category click from donut chart
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  useEffect(() => {
+    if (!activeDrilldown) {
+      setDrilldownTransactions([]);
+      return;
+    }
+
+    const drilldownType = activeDrilldown;
+    let cancelled = false;
+
+    async function loadDrilldown() {
+      setDrilldownLoading(true);
+
+      const result = await fetchDashboardDrilldownTransactions({
+        type: drilldownType,
+        from,
+        to,
+        categoryId: stats?.topCategory?.categoryId,
+        limit: drilldownType === "largest-transactions" ? 5 : undefined,
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      if (result.success) {
+        setDrilldownTransactions(result.data);
+      } else {
+        setDrilldownTransactions([]);
+        toast("Could not load spending data. Please try refreshing.");
+      }
+
+      setDrilldownLoading(false);
+    }
+
+    loadDrilldown();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDrilldown, from, stats?.topCategory?.categoryId, to]);
+
   const handleCategoryClick = useCallback(
-    (catId: string | null) => {
-      setCategoryId(catId ?? '');
+    (nextCategoryId: string | null) => {
+      setCategoryId(nextCategoryId ?? "");
     },
-    [setCategoryId]
+    [setCategoryId],
   );
 
   const handleClearFilter = useCallback(() => {
-    setCategoryId('');
+    setCategoryId("");
   }, [setCategoryId]);
 
-  // Determine if we should show empty state
+  const handleSort = useCallback(
+    (columnId: string) => {
+      if (sort === columnId) {
+        setDir(dir === "asc" ? "desc" : "asc");
+      } else {
+        setSort(columnId);
+        setDir(columnId === "transaction_date" ? "desc" : "asc");
+      }
+    },
+    [dir, setDir, setSort, sort],
+  );
+
+  const modalTitle =
+    activeDrilldown === "top-category"
+      ? "Top Category Transactions"
+      : activeDrilldown === "largest-transactions"
+        ? "Largest Transactions"
+        : activeDrilldown === "subscriptions"
+          ? "Subscriptions Transactions"
+          : "";
+
   const isEmpty =
-    !loading &&
+    !analyticsLoading &&
     stats !== null &&
     stats.totalSpending === 0 &&
-    recentTxs.length === 0;
+    transactionTotal === 0;
 
-  // Profile still loading
   if (profileLoading) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+        <h1 className="mb-8 text-2xl font-bold">Dashboard</h1>
         <DashboardSkeleton />
       </div>
     );
   }
 
-  // Empty state — keep DateRangeSelector so users can change the date range
   if (isEmpty) {
     return (
       <div>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <DateRangeSelector />
         </div>
-        {profile?.role === 'admin' ? (
+        {profile?.role === "admin" ? (
           <EmptyState
             icon={<BarChart3 size={48} />}
             heading="No spending data yet"
@@ -202,67 +434,116 @@ function DashboardContent() {
 
   return (
     <div>
-      {/* 1. Page header row */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <DateRangeSelector />
       </div>
 
-      {loading ? (
+      {analyticsLoading || !stats ? (
         <DashboardSkeleton />
       ) : (
         <div
           className={
             transitioning
-              ? 'opacity-50 transition-opacity duration-300'
-              : 'transition-opacity duration-300'
+              ? "opacity-50 transition-opacity duration-300"
+              : "transition-opacity duration-300"
           }
         >
-          {/* 2. Category filter badge (conditional) */}
-          {activeCategoryId && activeCategoryName && (
-            <div className="mb-4">
-              <CategoryFilterBadge
-                categoryName={activeCategoryName}
-                onClear={handleClearFilter}
-              />
-            </div>
-          )}
-
-          {/* 3. Stat Card Grid */}
-          {stats && (
-            <div className="mb-8">
-              <StatCardGrid
-                totalSpending={stats.totalSpending}
-                previousMonthSpending={stats.previousMonthSpending}
-                monthlyAverage={stats.monthlyAverage}
-                topCategory={stats.topCategory}
-                largestTransaction={stats.largestTransaction}
-                recurringSpend={stats.recurringSpend}
-              />
-            </div>
-          )}
-
-          {/* 4. Charts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <CategoryDonutChart
-              data={breakdown}
-              totalSpending={stats?.totalSpending ?? 0}
-              activeCategoryId={activeCategoryId}
-              onCategoryClick={handleCategoryClick}
+          <div className="mb-8">
+            <StatCardGrid
+              mode={analysisMode}
+              stats={stats}
+              onTopCategoryClick={
+                analysisMode === "single-month" && stats.topCategory
+                  ? () => setActiveDrilldown("top-category")
+                  : undefined
+              }
+              onLargestTransactionClick={
+                stats.largestTransaction
+                  ? () => setActiveDrilldown("largest-transactions")
+                  : undefined
+              }
+              onRecurringSpendClick={
+                stats.recurringSpend.total > 0
+                  ? () => setActiveDrilldown("subscriptions")
+                  : undefined
+              }
             />
-            <MonthlyBarChart data={trend} />
           </div>
 
-          {/* 5. Recent Transactions */}
+          <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {analysisMode === "multi-month-preset" ? (
+              <CategoryDonutChart variant="bar" data={breakdown} />
+            ) : (
+              <CategoryDonutChart
+                variant="donut"
+                data={breakdown}
+                totalSpending={stats.totalSpending}
+                activeCategoryId={activeCategoryId}
+                onCategoryClick={handleCategoryClick}
+              />
+            )}
+
+            {analysisMode === "single-month" ? (
+              <MonthlyBarChart
+                variant="category-trends"
+                data={categoryTrends}
+              />
+            ) : (
+              <MonthlyBarChart
+                variant="time-series"
+                title={
+                  analysisMode === "custom-range"
+                    ? "Spending Over Time"
+                    : "Monthly Spending"
+                }
+                data={timeSeries}
+              />
+            )}
+          </div>
+
           <RecentTransactions
-            transactions={recentTxs}
-            total={recentTotal}
-            dateFrom={from}
-            dateTo={to}
-            categoryId={activeCategoryId}
+            transactions={transactions}
+            total={transactionTotal}
+            page={page}
+            totalPages={transactionTotalPages}
+            pageSize={PAGE_SIZE}
+            search={search}
+            sortBy={sort}
+            sortDir={(dir as "asc" | "desc") || "desc"}
+            loading={transactionsLoading}
+            categoryName={activeCategoryName}
+            onSearchChange={(value) => setSearch(value || null)}
+            onSort={handleSort}
+            onPageChange={setPage}
+            onClearFilter={handleClearFilter}
           />
         </div>
       )}
+
+      <Dialog
+        open={activeDrilldown !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveDrilldown(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto p-5 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
+          {drilldownLoading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : (
+            <ModalTransactionList transactions={drilldownTransactions} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

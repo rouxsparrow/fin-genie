@@ -1,130 +1,267 @@
-'use client';
+"use client";
 
-import { StatCard, type ComparisonItem } from '@/components/dashboard/stat-card';
+import type { DashboardAnalysisMode } from "@/lib/hooks/use-date-range";
+import type { DashboardStats } from "@/app/actions/analytics-actions";
+import {
+  StatCard,
+  type ComparisonItem,
+} from "@/components/dashboard/stat-card";
 
-export interface StatCardGridProps {
-  totalSpending: number; // cents
-  previousMonthSpending: number | null;
-  monthlyAverage: number | null;
-  topCategory: { name: string; amount: number } | null;
-  largestTransaction: { description: string; amount: number } | null;
-  recurringSpend: number; // cents
+interface StatCardGridProps {
+  mode: DashboardAnalysisMode;
+  stats: DashboardStats;
+  onTopCategoryClick?: () => void;
+  onLargestTransactionClick?: () => void;
+  onRecurringSpendClick?: () => void;
 }
 
-function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat('en-SG', {
-    style: 'currency',
-    currency: 'SGD',
+function formatCurrency(cents: number | null): string {
+  if (cents === null) {
+    return "--";
+  }
+
+  return new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency: "SGD",
   }).format(cents / 100);
 }
 
 function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
 }
 
-function calculatePercentChange(
-  current: number,
-  previous: number | null
-): { text: string; direction: 'up' | 'down' | 'neutral' } | null {
-  if (previous === null || previous === 0) {
-    return null;
+function toComparison(percent: number | null, label: string): ComparisonItem {
+  if (percent === null) {
+    return {
+      text: `-- ${label}`,
+      direction: "neutral",
+    };
   }
 
-  const change = ((current - previous) / previous) * 100;
-  const rounded = Math.abs(Math.round(change));
-
-  if (change > 0) {
-    return { text: `${rounded}%`, direction: 'up' };
-  } else if (change < 0) {
-    return { text: `${rounded}%`, direction: 'down' };
+  if (percent === 0) {
+    return {
+      text: `0% ${label}`,
+      direction: "neutral",
+    };
   }
-  return { text: '0%', direction: 'neutral' };
+
+  return {
+    text: `${Math.abs(Math.round(percent))}% ${label}`,
+    direction: percent > 0 ? "up" : "down",
+  };
+}
+
+function TopCategoriesList({
+  items,
+}: {
+  items: DashboardStats["topCategories"];
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm font-medium opacity-40">No transactions</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((item, index) => (
+        <div
+          key={item.categoryId}
+          className="flex items-center justify-between gap-3 text-sm font-medium"
+        >
+          <span className="truncate opacity-70">
+            {index + 1}. {item.name}
+          </span>
+          <span className="shrink-0 tabular-nums">
+            {formatCurrency(item.amount)} · {item.percentage}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function StatCardGrid({
-  totalSpending,
-  previousMonthSpending,
-  monthlyAverage,
-  topCategory,
-  largestTransaction,
-  recurringSpend,
+  mode,
+  stats,
+  onTopCategoryClick,
+  onLargestTransactionClick,
+  onRecurringSpendClick,
 }: StatCardGridProps) {
-  // Build comparison lines for Total Spending card
-  const vsLastMonth = calculatePercentChange(
-    totalSpending,
-    previousMonthSpending
-  );
-  const vsMonthlyAvg = calculatePercentChange(totalSpending, monthlyAverage);
-
-  const totalSpendingComparison: ComparisonItem[] = [];
-
-  if (vsLastMonth) {
-    totalSpendingComparison.push({
-      text: `${vsLastMonth.text} vs last month`,
-      direction: vsLastMonth.direction,
-    });
-  } else {
-    totalSpendingComparison.push({
-      text: '-- vs last month',
-      direction: 'neutral',
-    });
+  if (mode === "single-month") {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Total Spending"
+          value={formatCurrency(stats.totalSpending)}
+          valueClassName="text-[32px] font-bold tabular-nums"
+          comparison={[
+            toComparison(stats.previousPeriodChange, "vs last month"),
+            toComparison(
+              stats.sameMonthAverageChange,
+              `vs ${stats.sameMonthAverageLabel}`,
+            ),
+          ]}
+        />
+        <StatCard
+          label="Top Category"
+          value={stats.topCategory?.name ?? "--"}
+          subtext={
+            stats.topCategory
+              ? `${formatCurrency(stats.topCategory.amount)} · ${stats.topCategory.percentage}%`
+              : "No transactions"
+          }
+          onClick={stats.topCategory ? onTopCategoryClick : undefined}
+        />
+        <StatCard
+          label="Largest Transaction"
+          value={
+            stats.largestTransaction
+              ? formatCurrency(stats.largestTransaction.amount)
+              : "--"
+          }
+          valueClassName="text-2xl font-bold tabular-nums"
+          subtext={
+            stats.largestTransaction
+              ? truncate(stats.largestTransaction.description, 30)
+              : "No transactions"
+          }
+          onClick={
+            stats.largestTransaction ? onLargestTransactionClick : undefined
+          }
+        />
+        <StatCard
+          label="Recurring Spend"
+          value={formatCurrency(stats.recurringSpend.total)}
+          valueClassName="text-2xl font-bold tabular-nums"
+          subtext={
+            stats.recurringSpend.total > 0
+              ? "Subscriptions"
+              : "No subscriptions category"
+          }
+          subtextClassName={
+            stats.recurringSpend.total > 0 ? undefined : "opacity-40"
+          }
+          onClick={
+            stats.recurringSpend.total > 0 ? onRecurringSpendClick : undefined
+          }
+        />
+      </div>
+    );
   }
 
-  if (vsMonthlyAvg) {
-    totalSpendingComparison.push({
-      text: `${vsMonthlyAvg.text} vs monthly avg`,
-      direction: vsMonthlyAvg.direction,
-    });
-  } else {
-    totalSpendingComparison.push({
-      text: '-- vs monthly avg',
-      direction: 'neutral',
-    });
+  if (mode === "multi-month-preset") {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Average Monthly Amount"
+          value={formatCurrency(stats.averageMonthlyAmount)}
+          comparison={[
+            {
+              text: `Highest ${formatCurrency(stats.highestMonth?.amount ?? null)}`,
+              direction: "neutral",
+            },
+            {
+              text: `Lowest ${formatCurrency(stats.lowestMonth?.amount ?? null)}`,
+              direction: "neutral",
+            },
+          ]}
+          footerContent={
+            <div className="text-sm font-medium opacity-60">
+              {stats.highestMonth?.label ?? "--"} /{" "}
+              {stats.lowestMonth?.label ?? "--"}
+            </div>
+          }
+        />
+        <StatCard
+          label="Top 3 Categories"
+          value={
+            stats.topCategories.length > 0
+              ? `${stats.topCategories.length} categories`
+              : "--"
+          }
+          footerContent={<TopCategoriesList items={stats.topCategories} />}
+        />
+        <StatCard
+          label="Largest Transaction"
+          value={
+            stats.largestTransaction
+              ? formatCurrency(stats.largestTransaction.amount)
+              : "--"
+          }
+          valueClassName="text-2xl font-bold tabular-nums"
+          subtext={
+            stats.largestTransaction
+              ? truncate(stats.largestTransaction.description, 30)
+              : "No transactions"
+          }
+          onClick={
+            stats.largestTransaction ? onLargestTransactionClick : undefined
+          }
+        />
+        <StatCard
+          label="Recurring Spend"
+          value={formatCurrency(stats.recurringSpend.total)}
+          comparison={[
+            {
+              text: `Avg / month ${formatCurrency(
+                stats.recurringSpend.averagePerMonth,
+              )}`,
+              direction: "neutral",
+            },
+          ]}
+          subtext="Subscriptions"
+          subtextClassName={
+            stats.recurringSpend.total > 0 ? undefined : "opacity-40"
+          }
+          onClick={
+            stats.recurringSpend.total > 0 ? onRecurringSpendClick : undefined
+          }
+        />
+      </div>
+    );
   }
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {/* Card 1: Total Spending */}
       <StatCard
-        label="Total Spending"
-        value={formatCurrency(totalSpending)}
-        valueClassName="text-[32px] font-bold tabular-nums"
-        comparison={totalSpendingComparison}
+        label="Total Spending Amount"
+        value={formatCurrency(stats.totalSpending)}
+        comparison={[
+          {
+            text: `Avg / Day ${formatCurrency(stats.avgPerDay)}`,
+            direction: "neutral",
+          },
+        ]}
       />
-
-      {/* Card 2: Top Category */}
       <StatCard
-        label="Top Category"
-        value={topCategory?.name ?? '--'}
-        subtext={
-          topCategory ? formatCurrency(topCategory.amount) : 'No transactions'
+        label="Top Categories"
+        value={
+          stats.topCategories.length > 0
+            ? `${stats.topCategories.length} categories`
+            : "--"
         }
+        footerContent={<TopCategoriesList items={stats.topCategories} />}
       />
-
-      {/* Card 3: Largest Transaction */}
       <StatCard
         label="Largest Transaction"
         value={
-          largestTransaction
-            ? formatCurrency(largestTransaction.amount)
-            : '--'
+          stats.largestTransaction
+            ? formatCurrency(stats.largestTransaction.amount)
+            : "--"
         }
         valueClassName="text-2xl font-bold tabular-nums"
         subtext={
-          largestTransaction
-            ? truncate(largestTransaction.description, 30)
-            : 'No transactions'
+          stats.largestTransaction
+            ? truncate(stats.largestTransaction.description, 30)
+            : "No transactions"
+        }
+        onClick={
+          stats.largestTransaction ? onLargestTransactionClick : undefined
         }
       />
-
-      {/* Card 4: Recurring Spend */}
       <StatCard
-        label="Recurring Spend"
-        value={formatCurrency(recurringSpend)}
-        valueClassName="text-2xl font-bold tabular-nums"
-        subtext={recurringSpend > 0 ? 'Subscriptions' : 'No subscriptions category'}
-        subtextClassName={recurringSpend > 0 ? undefined : 'opacity-40'}
+        label="Total Days"
+        value={`${stats.totalDays}`}
+        subtext="Selected range"
       />
     </div>
   );

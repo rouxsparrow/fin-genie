@@ -1,27 +1,39 @@
-'use client';
+"use client";
 
-import { useCallback } from 'react';
+import { useCallback } from "react";
+import { ArrowDownRight, ArrowUpRight, Dot, Minus } from "lucide-react";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { format, parseISO } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartTooltip } from '@/components/dashboard/chart-tooltip';
+} from "recharts";
+import { format, parseISO } from "date-fns";
+import type {
+  CategoryTrendItem,
+  MonthlyTrendItem,
+} from "@/app/actions/analytics-actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/dashboard/chart-tooltip";
 
-interface MonthlyBarChartProps {
-  data: Array<{ month: string; label: string; amount: number }>;
-}
+type MonthlyBarChartProps =
+  | {
+      variant: "time-series";
+      title: string;
+      data: MonthlyTrendItem[];
+    }
+  | {
+      variant: "category-trends";
+      data: CategoryTrendItem[];
+    };
 
 function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat('en-SG', {
-    style: 'currency',
-    currency: 'SGD',
+  return new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency: "SGD",
   }).format(cents / 100);
 }
 
@@ -29,37 +41,113 @@ function formatYAxisTick(value: number): string {
   if (value >= 100000) {
     return `$${(value / 100000).toFixed(0)}k`;
   }
+
   return `$${(value / 100).toFixed(0)}`;
 }
 
-export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
-  // Tooltip formatter
+function CategoryTrendList({ data }: { data: CategoryTrendItem[] }) {
+  if (data.length === 0) {
+    return (
+      <div
+        className="flex min-h-[320px] items-center justify-center"
+        role="img"
+        aria-label="Category trends"
+      >
+        <p className="text-base font-medium opacity-60">
+          No category changes for this month
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[320px] flex-col gap-3">
+      {data.slice(0, 6).map((item) => {
+        const Icon =
+          item.direction === "up"
+            ? ArrowUpRight
+            : item.direction === "down"
+              ? ArrowDownRight
+              : item.direction === "new"
+                ? Dot
+                : Minus;
+        const deltaText =
+          item.direction === "new"
+            ? "New"
+            : `${item.deltaPercent && item.deltaPercent > 0 ? "+" : ""}${Math.round(item.deltaPercent ?? 0)}%`;
+
+        return (
+          <div
+            key={item.categoryId}
+            className="flex items-center justify-between gap-4 rounded-base border-2 border-border bg-secondary-background p-4"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-base font-bold">
+                {item.categoryName}
+              </p>
+              <p className="text-sm font-medium opacity-60">
+                {formatCurrency(item.currentAmount)}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-sm font-bold">
+              <Icon className="h-4 w-4" />
+              <span>{deltaText}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MonthlyBarChart(props: MonthlyBarChartProps) {
+  if (props.variant === "category-trends") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Category Trends</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CategoryTrendList data={props.data} />
+        </CardContent>
+      </Card>
+    );
+  }
+
   const tooltipFormatter = useCallback(
     (value: number, _name: string, payload: Record<string, unknown>) => {
-      const month = (payload as unknown as { month: string }).month;
-      const fullMonthLabel = format(parseISO(`${month}-01`), 'MMMM yyyy');
+      const periodStart = payload.periodStart as string | undefined;
+      const periodEnd = payload.periodEnd as string | undefined;
+      const bucket = payload.bucket as MonthlyTrendItem["bucket"] | undefined;
+
+      const label =
+        bucket === "month" && periodStart
+          ? format(parseISO(periodStart), "MMMM yyyy")
+          : periodStart && periodEnd
+            ? `${format(parseISO(periodStart), "d MMM yyyy")} - ${format(parseISO(periodEnd), "d MMM yyyy")}`
+            : "Selected period";
 
       return (
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-bold">{fullMonthLabel}</span>
+          <span className="text-sm font-bold">{label}</span>
           <span className="text-sm font-medium">{formatCurrency(value)}</span>
         </div>
       );
     },
-    []
+    [],
   );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Monthly Spending</CardTitle>
+        <CardTitle className="text-2xl">{props.title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {data.length === 0 ? (
+        {props.data.length === 0 ? (
           <div
-            className="flex items-center justify-center min-h-[320px]"
+            className="flex min-h-[320px] items-center justify-center"
             role="img"
-            aria-label="Monthly spending trend"
+            aria-label={props.title}
           >
             <p className="text-base font-medium opacity-60">
               No spending data for this period
@@ -67,13 +155,9 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
           </div>
         ) : (
           <>
-            <div
-              className="min-h-[320px]"
-              role="img"
-              aria-label="Monthly spending trend"
-            >
+            <div className="min-h-[320px]" role="img" aria-label={props.title}>
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={data}>
+                <BarChart data={props.data}>
                   <CartesianGrid
                     vertical={false}
                     stroke="var(--border)"
@@ -88,6 +172,10 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
                     }}
                     tickLine={false}
                     axisLine={false}
+                    interval={0}
+                    angle={props.data.length > 8 ? -20 : 0}
+                    textAnchor={props.data.length > 8 ? "end" : "middle"}
+                    height={props.data.length > 8 ? 52 : 30}
                   />
                   <YAxis
                     tickFormatter={formatYAxisTick}
@@ -115,20 +203,21 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
               </ResponsiveContainer>
             </div>
 
-            {/* Screen reader accessible data table */}
             <table className="sr-only">
-              <caption>Monthly spending trend</caption>
+              <caption>{props.title}</caption>
               <thead>
                 <tr>
-                  <th>Month</th>
+                  <th>Period</th>
                   <th>Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {data.map((entry) => (
-                  <tr key={entry.month}>
+                {props.data.map((entry) => (
+                  <tr key={entry.key}>
                     <td>
-                      {format(parseISO(`${entry.month}-01`), 'MMMM yyyy')}
+                      {entry.bucket === "month"
+                        ? format(parseISO(entry.periodStart), "MMMM yyyy")
+                        : `${format(parseISO(entry.periodStart), "d MMM yyyy")} - ${format(parseISO(entry.periodEnd), "d MMM yyyy")}`}
                     </td>
                     <td>{formatCurrency(entry.amount)}</td>
                   </tr>
