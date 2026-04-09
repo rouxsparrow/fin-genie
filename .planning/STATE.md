@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: milestone_complete
-stopped_at: v1.0 MVP shipped
-last_updated: "2026-04-08T05:06:34.518Z"
-last_activity: 2026-04-08
+milestone: v1.1
+milestone_name: insights-management-ux
+status: roadmap_defined
+stopped_at: Milestone v1.1 initialized and ready for Phase 05 discussion
+last_updated: "2026-04-09T00:00:00.000Z"
+last_activity: 2026-04-09
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08)
+See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** Household members can see where their money goes -- upload a bank statement, have transactions auto-categorized, and view spending breakdowns by category and time period.
-**Current focus:** Milestone v1.0 — COMPLETE
+**Current focus:** Milestone v1.1 — Insights & Management UX
 
 ## Current Position
 
-Phase: 04 (dashboard-analytics) — COMPLETE
-Plan: 3 of 3
-Status: All plans executed and verified
-Last activity: 2026-04-08
+Phase: 05 (dashboard-analysis-enhancements)
+Plan: —
+Status: Roadmap defined; ready to discuss Phase 05
+Last activity: 2026-04-09 — Milestone v1.1 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 14
 - Average duration: --
 - Total execution time: 0 hours
 
@@ -44,10 +44,9 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | - | - |
-| 02 | 4 | - | - |
-| 03 | 4 | - | - |
-| 04 | 3 | - | - |
+| 05 | 0 | - | - |
+| 06 | 0 | - | - |
+| 07 | 0 | - | - |
 
 **Recent Trend:**
 
@@ -71,7 +70,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- Phase 05 should establish the dashboard-to-transactions drill-down contract early so later pages can reuse the same URL/filter model.
+- Phase 06 should revisit current transaction filter limitations before adding new controls so the UX stays coherent on mobile.
+- Phase 07 should keep rules and categories UX aligned where they overlap, especially around category labels and exclude-from-stats affordances.
 
 ### Blockers/Concerns
 
@@ -87,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Completed quick task 260408-mvw: exclude category from stats
+Last session: 2026-04-09
+Stopped at: Milestone v1.1 initialized
 Resume file: None

@@ -8,6 +8,16 @@ A private household finance analyzer that imports Citibank SG credit card PDFs, 
 
 Household members can see where their money goes — upload a bank statement, have transactions auto-categorized, and view spending breakdowns by category and time period.
 
+## Current Milestone: v1.1 Insights & Management UX
+
+**Goal:** Make spending analysis more actionable and make day-to-day transaction, rule, and category management faster and clearer.
+
+**Target features:**
+- Dashboard analysis improvements with deeper comparisons, drill-down paths, and clearer insight summaries
+- Transactions page enhancements for faster filtering, sorting, and movement between summary and detail views
+- Rules page UX improvements for scanning, editing, and safer recategorization workflows
+- Categories page UX improvements for organization, stats visibility, and routine maintenance
+
 ## Requirements
 
 ### Validated
@@ -44,7 +54,10 @@ Household members can see where their money goes — upload a bank statement, ha
 
 ### Active
 
-(None — next milestone requirements defined via `/gsd-new-milestone`)
+- [ ] Dashboard drill-downs, richer comparisons, and more actionable summaries
+- [ ] Faster transaction exploration with stronger filters and clearer list state
+- [ ] Rules management UX improvements for creation, editing, ordering, and recategorization confidence
+- [ ] Category management UX improvements for organizing categories and understanding dashboard inclusion
 
 ### Out of Scope
 
@@ -70,6 +83,7 @@ Household members can see where their money goes — upload a bank statement, ha
 - **Users:** Small household (2-3 users), admin + viewer roles
 - **Import workflow:** Upload → Parse → Review → Create rules inline → Re-parse → 100% categorized → Import
 - **Rule evolution:** Rules build up organically; later imports auto-categorize most transactions
+- **Known gaps entering v1.1:** Dashboard insights stop at high-level charts, transactions exploration is limited to search + category filter, and admin management pages are functional but still dense for regular upkeep
 
 ## Constraints
 
@@ -114,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after v1.0 milestone*
+*Last updated: 2026-04-09 after v1.1 milestone kickoff*
