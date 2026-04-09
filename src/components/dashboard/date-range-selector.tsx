@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, parseISO, setMonth, setYear } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import {
+  CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -18,58 +25,74 @@ const presets: { value: DatePreset; label: string }[] = [
   { value: "this-year", label: "This Year" },
 ];
 
+const monthOptions = Array.from({ length: 12 }).map((_, index) => ({
+  value: index,
+  label: format(setMonth(new Date(), index), "MMM"),
+}));
+
 export function DateRangeSelector() {
   const {
     from,
     to,
     preset,
     viewedMonthLabel,
+    viewedMonthStart,
     canGoToNextMonth,
     setPreset,
     setCustomRange,
+    setViewedMonth,
     goToPreviousMonth,
     goToNextMonth,
   } = useDateRange();
+  const currentYear = new Date().getFullYear();
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [customStart, setCustomStart] = useState<Date | undefined>();
-  const [customEnd, setCustomEnd] = useState<Date | undefined>();
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [customRange, setCustomRangeState] = useState<DateRange | undefined>();
+  const [pickerYear, setPickerYear] = useState(viewedMonthStart.getFullYear());
 
   useEffect(() => {
     if (preset === "custom") {
-      setCustomStart(parseISO(from));
-      setCustomEnd(parseISO(to));
+      setCustomRangeState({
+        from: parseISO(from),
+        to: parseISO(to),
+      });
     }
   }, [from, to, preset]);
+
+  useEffect(() => {
+    setPickerYear(viewedMonthStart.getFullYear());
+  }, [viewedMonthStart.getFullYear()]);
 
   function handlePresetClick(presetValue: DatePreset) {
     setPreset(presetValue);
   }
 
-  function handleCustomStartSelect(date: Date | undefined) {
-    if (!date) {
-      return;
-    }
+  function handleCustomRangeSelect(range: DateRange | undefined) {
+    setCustomRangeState(range);
 
-    setCustomStart(date);
-
-    if (customEnd && date <= customEnd) {
-      setCustomRange(date, customEnd);
+    if (range?.from && range.to) {
+      setCustomRange(range.from, range.to);
       setPopoverOpen(false);
     }
   }
 
-  function handleCustomEndSelect(date: Date | undefined) {
+  function handleCustomRangeReset() {
+    setCustomRangeState(undefined);
+  }
+
+  function handleMonthSelect(date: Date | undefined) {
     if (!date) {
       return;
     }
 
-    setCustomEnd(date);
-
-    if (customStart && date >= customStart) {
-      setCustomRange(customStart, date);
-      setPopoverOpen(false);
-    }
+    setViewedMonth(date);
+    setMonthPickerOpen(false);
   }
+
+  const earliestYear = Math.min(
+    currentYear - 5,
+    viewedMonthStart.getFullYear(),
+  );
 
   const customLabel =
     preset === "custom"
@@ -92,15 +115,80 @@ export function DateRangeSelector() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button
-          size="sm"
-          variant={preset === "this-month" ? "default" : "neutral"}
-          aria-pressed={preset === "this-month"}
-          onClick={() => handlePresetClick("this-month")}
-          className="min-w-[96px]"
-        >
-          {viewedMonthLabel}
-        </Button>
+        <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              variant={preset === "this-month" ? "default" : "neutral"}
+              aria-pressed={preset === "this-month"}
+              className="min-w-[96px]"
+            >
+              {viewedMonthLabel}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[280px] p-4" align="center">
+            <div className="flex flex-col gap-3">
+              <span className="text-xs font-medium opacity-60">Pick month</span>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="neutral"
+                  onClick={() =>
+                    setPickerYear((year) => Math.max(earliestYear, year - 1))
+                  }
+                  disabled={pickerYear <= earliestYear}
+                  aria-label="Previous year"
+                  className="size-9"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-[88px] text-center text-lg font-bold tabular-nums">
+                  {pickerYear}
+                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="neutral"
+                  onClick={() =>
+                    setPickerYear((year) => Math.min(currentYear, year + 1))
+                  }
+                  disabled={pickerYear >= currentYear}
+                  aria-label="Next year"
+                  className="size-9"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {monthOptions.map((month) => {
+                  const monthDate = setMonth(
+                    setYear(new Date(), pickerYear),
+                    month.value,
+                  );
+                  const disabled = monthDate > new Date();
+                  const isActive =
+                    viewedMonthStart.getFullYear() === pickerYear &&
+                    viewedMonthStart.getMonth() === month.value;
+
+                  return (
+                    <Button
+                      key={month.value}
+                      type="button"
+                      size="sm"
+                      variant={isActive ? "default" : "neutral"}
+                      disabled={disabled}
+                      onClick={() => handleMonthSelect(monthDate)}
+                      className="w-full"
+                    >
+                      {month.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button
           size="icon"
           variant={preset === "this-month" ? "default" : "neutral"}
@@ -132,31 +220,39 @@ export function DateRangeSelector() {
             size="sm"
             variant={preset === "custom" ? "default" : "neutral"}
             aria-pressed={preset === "custom"}
+            className="min-w-[160px]"
           >
             <CalendarIcon className="mr-1 h-3.5 w-3.5" />
             {customLabel}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-4" align="end">
-          <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium opacity-60">Start date</span>
-              <Calendar
-                mode="single"
-                selected={customStart}
-                onSelect={handleCustomStartSelect}
-                toDate={customEnd}
-              />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs font-medium opacity-60">
+                Select range
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="neutral"
+                onClick={handleCustomRangeReset}
+                disabled={!customRange?.from && !customRange?.to}
+              >
+                Reset
+              </Button>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium opacity-60">End date</span>
-              <Calendar
-                mode="single"
-                selected={customEnd}
-                onSelect={handleCustomEndSelect}
-                fromDate={customStart}
-              />
-            </div>
+            <Calendar
+              mode="range"
+              min={1}
+              defaultMonth={customRange?.from}
+              selected={customRange}
+              onSelect={handleCustomRangeSelect}
+              numberOfMonths={2}
+              disabled={(date) =>
+                date > new Date() || date < new Date("1900-01-01")
+              }
+            />
           </div>
         </PopoverContent>
       </Popover>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { ArrowDownRight, ArrowUpRight, Dot, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -24,6 +24,7 @@ type MonthlyBarChartProps =
       variant: "time-series";
       title: string;
       data: MonthlyTrendItem[];
+      reserveTopSpace?: boolean;
     }
   | {
       variant: "category-trends";
@@ -68,28 +69,31 @@ function CategoryTrendList({ data }: { data: CategoryTrendItem[] }) {
             ? ArrowUpRight
             : item.direction === "down"
               ? ArrowDownRight
-              : item.direction === "new"
-                ? Dot
-                : Minus;
-        const deltaText =
-          item.direction === "new"
-            ? "New"
-            : `${item.deltaPercent && item.deltaPercent > 0 ? "+" : ""}${Math.round(item.deltaPercent ?? 0)}%`;
+              : Minus;
+        const deltaText = `${item.deltaPercent && item.deltaPercent > 0 ? "+" : ""}${Math.round(item.deltaPercent ?? 0)}%`;
+        const deltaClassName =
+          item.direction === "up"
+            ? "text-[#d97706]"
+            : item.direction === "down"
+              ? "text-[#16a34a]"
+              : "text-foreground opacity-60";
 
         return (
           <div
             key={item.categoryId}
             className="flex items-center justify-between gap-4 rounded-base border-2 border-border bg-secondary-background p-4"
           >
-            <div className="min-w-0">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <p className="truncate text-base font-bold">
                 {item.categoryName}
               </p>
-              <p className="text-sm font-medium opacity-60">
+              <p className="shrink-0 text-sm font-medium opacity-70">
                 {formatCurrency(item.currentAmount)}
               </p>
             </div>
-            <div className="flex items-center gap-1 text-sm font-bold">
+            <div
+              className={`flex items-center gap-1 text-sm font-bold ${deltaClassName}`}
+            >
               <Icon className="h-4 w-4" />
               <span>{deltaText}</span>
             </div>
@@ -142,7 +146,7 @@ export function MonthlyBarChart(props: MonthlyBarChartProps) {
       <CardHeader>
         <CardTitle className="text-2xl">{props.title}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col">
         {props.data.length === 0 ? (
           <div
             className="flex min-h-[320px] items-center justify-center"
@@ -155,9 +159,10 @@ export function MonthlyBarChart(props: MonthlyBarChartProps) {
           </div>
         ) : (
           <>
+            {props.reserveTopSpace && <div className="min-h-[88px]" />}
             <div className="min-h-[320px]" role="img" aria-label={props.title}>
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={props.data}>
+                <BarChart data={props.data} accessibilityLayer={false}>
                   <CartesianGrid
                     vertical={false}
                     stroke="var(--border)"
@@ -197,7 +202,7 @@ export function MonthlyBarChart(props: MonthlyBarChartProps) {
                     stroke="var(--border)"
                     strokeWidth={2}
                     radius={[5, 5, 0, 0]}
-                    activeBar={{ fillOpacity: 0.85 }}
+                    activeBar={{ fillOpacity: 0.85, strokeWidth: 2 }}
                   />
                 </BarChart>
               </ResponsiveContainer>

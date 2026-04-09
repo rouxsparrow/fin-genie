@@ -8,8 +8,11 @@ import {
   format,
   isSameDay,
   parseISO,
+  setMonth,
+  setYear,
   startOfDay,
   startOfMonth,
+  startOfYear,
   startOfWeek,
   subDays,
   subMonths,
@@ -88,7 +91,23 @@ export type CategoryTrendItem = {
   currentAmount: number;
   previousAmount: number;
   deltaPercent: number | null;
-  direction: "up" | "down" | "flat" | "new";
+  direction: "up" | "down" | "flat";
+};
+
+export type CategoryComparisonSeries = {
+  categories: Array<{
+    categoryId: string;
+    categoryName: string;
+    totalAmount: number;
+  }>;
+  series: Record<
+    string,
+    Array<{
+      key: string;
+      label: string;
+      amount: number;
+    }>
+  >;
 };
 
 export type TransactionListResult = {
@@ -298,6 +317,51 @@ function buildMonthlyTotals(transactions: TransactionWithCategory[]) {
     }));
 }
 
+function buildYearToDateAverage(
+  transactions: TransactionWithCategory[],
+  selectedDate: Date,
+) {
+  const selectedYear = selectedDate.getFullYear();
+  const selectedMonth = selectedDate.getMonth();
+
+  if (selectedMonth === 0) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (let monthIndex = 0; monthIndex < selectedMonth; monthIndex += 1) {
+    const monthStart = startOfMonth(
+      setMonth(setYear(new Date(), selectedYear), monthIndex),
+    );
+    const monthKey = format(monthStart, "yyyy-MM");
+    const monthTotal = transactions
+      .filter(
+        (transaction) =>
+          format(parseISO(transaction.transaction_date), "yyyy-MM") ===
+          monthKey,
+      )
+      .reduce((sum, transaction) => sum + transaction.amount_cents, 0);
+
+    total += monthTotal;
+  }
+
+  return Math.round(total / selectedMonth);
+}
+
+function enumerateMonths(fromDate: Date, toDate: Date) {
+  const months: Date[] = [];
+  let cursor = startOfMonth(fromDate);
+  const end = startOfMonth(toDate);
+
+  while (cursor <= end) {
+    months.push(cursor);
+    cursor = startOfMonth(subMonths(cursor, -1));
+  }
+
+  return months;
+}
+
 function fetchSpendingTransactions(
   supabase: SupabaseClient,
   householdId: string,
@@ -379,11 +443,16 @@ export async function fetchDashboardStats(
   const fromDate = parseISO(from);
   const toDate = parseISO(to);
   const comparisonRange = buildEquivalentPeriodRange(fromDate, toDate);
+  const yearStart = format(startOfYear(fromDate), "yyyy-MM-dd");
+  const priorMonthEnd =
+    fromDate.getMonth() === 0
+      ? null
+      : format(endOfMonth(subMonths(fromDate, 1)), "yyyy-MM-dd");
 
   const [
     { data: currentTransactions },
     { data: comparisonTransactions },
-    { data: allSpendingTransactions },
+    previousMonthsResult,
   ] = await Promise.all([
     fetchSpendingTransactions(supabase, householdId, from, to, excludedIds),
     fetchSpendingTransactions(
@@ -393,20 +462,23 @@ export async function fetchDashboardStats(
       comparisonRange.to,
       excludedIds,
     ),
-    fetchSpendingTransactions(
-      supabase,
-      householdId,
-      "1900-01-01",
-      format(endOfMonth(new Date()), "yyyy-MM-dd"),
-      excludedIds,
-    ),
+    priorMonthEnd
+      ? fetchSpendingTransactions(
+          supabase,
+          householdId,
+          yearStart,
+          priorMonthEnd,
+          excludedIds,
+        )
+      : Promise.resolve({ data: [] }),
   ]);
 
   const current = (currentTransactions ?? []) as TransactionWithCategory[];
   const comparison = (comparisonTransactions ??
     []) as TransactionWithCategory[];
-  const allSpending = (allSpendingTransactions ??
-    []) as TransactionWithCategory[];
+  const previousMonths = ((previousMonthsResult?.data as
+    | TransactionWithCategory[]
+    | undefined) ?? []) as TransactionWithCategory[];
 
   const totalSpending = sumAmounts(current);
   const previousPeriodSpending =
@@ -416,18 +488,7 @@ export async function fetchDashboardStats(
     previousPeriodSpending,
   );
 
-  const sameMonthTransactions = allSpending.filter(
-    (transaction) =>
-      parseISO(transaction.transaction_date).getMonth() === fromDate.getMonth(),
-  );
-  const sameMonthTotals = buildMonthlyTotals(sameMonthTransactions);
-  const sameMonthAverage =
-    sameMonthTotals.length > 0
-      ? Math.round(
-          sameMonthTotals.reduce((sum, item) => sum + item.amount, 0) /
-            sameMonthTotals.length,
-        )
-      : null;
+  const sameMonthAverage = buildYearToDateAverage(previousMonths, fromDate);
   const sameMonthAverageChange = getPercentChange(
     totalSpending,
     sameMonthAverage,
@@ -491,7 +552,7 @@ export async function fetchDashboardStats(
       previousPeriodChange,
       sameMonthAverage,
       sameMonthAverageChange,
-      sameMonthAverageLabel: `${format(fromDate, "MMM")} average`,
+      sameMonthAverageLabel: "year-to-date average",
       topCategory,
       largestTransaction: largestTransaction
         ? {
@@ -733,11 +794,7 @@ export async function fetchCategoryTrends(
   const trends = current.map<CategoryTrendItem>((item) => {
     const previousAmount = previousMap.get(item.categoryId) ?? 0;
     const deltaPercent =
-      previousAmount === 0
-        ? item.amount > 0
-          ? null
-          : 0
-        : ((item.amount - previousAmount) / previousAmount) * 100;
+      ((item.amount - previousAmount) / previousAmount) * 100;
 
     return {
       categoryId: item.categoryId,
@@ -745,24 +802,120 @@ export async function fetchCategoryTrends(
       currentAmount: item.amount,
       previousAmount,
       deltaPercent,
-      direction:
-        previousAmount === 0 && item.amount > 0
-          ? "new"
-          : deltaPercent === 0
-            ? "flat"
-            : (deltaPercent ?? 0) > 0
-              ? "up"
-              : "down",
+      direction: deltaPercent === 0 ? "flat" : deltaPercent > 0 ? "up" : "down",
     };
   });
 
-  trends.sort((left, right) => {
-    const leftMagnitude = Math.abs(left.deltaPercent ?? 999);
-    const rightMagnitude = Math.abs(right.deltaPercent ?? 999);
+  const filteredTrends = trends.filter((trend) => trend.previousAmount > 0);
+
+  filteredTrends.sort((left, right) => {
+    const leftMagnitude = Math.abs(left.deltaPercent ?? 0);
+    const rightMagnitude = Math.abs(right.deltaPercent ?? 0);
     return rightMagnitude - leftMagnitude;
   });
 
-  return { success: true, data: trends };
+  return { success: true, data: filteredTrends };
+}
+
+export async function fetchCategoryComparisonSeries(
+  from: string,
+  to: string,
+): Promise<
+  | { success: true; data: CategoryComparisonSeries }
+  | { success: false; error: string }
+> {
+  const parsed = dateRangeSchema.safeParse({ from, to });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const auth = await verifyAuthenticated();
+  if (!auth.authenticated) {
+    return { success: false, error: auth.error };
+  }
+
+  const { supabase, profile } = auth;
+  const excludedIds = await getExcludedCategoryIds(
+    supabase,
+    profile.household_id,
+  );
+
+  const { data, error } = await fetchSpendingTransactions(
+    supabase,
+    profile.household_id,
+    from,
+    to,
+    excludedIds,
+  );
+
+  if (error) {
+    return { success: false, error: "Failed to fetch category comparison." };
+  }
+
+  const transactions = (data ?? []) as TransactionWithCategory[];
+  const months = enumerateMonths(parseISO(from), parseISO(to));
+  const baseSeries = months.map((monthDate) => ({
+    key: format(monthDate, "yyyy-MM"),
+    label: format(monthDate, "MMM"),
+    amount: 0,
+  }));
+
+  const categoryMap = new Map<
+    string,
+    {
+      categoryId: string;
+      categoryName: string;
+      totalAmount: number;
+      points: Array<{
+        key: string;
+        label: string;
+        amount: number;
+      }>;
+    }
+  >();
+
+  for (const transaction of transactions) {
+    const categoryId = transaction.category_id ?? "uncategorized";
+    const categoryName = transaction.categories?.name ?? "Uncategorized";
+    const monthKey = format(parseISO(transaction.transaction_date), "yyyy-MM");
+
+    if (!categoryMap.has(categoryId)) {
+      categoryMap.set(categoryId, {
+        categoryId,
+        categoryName,
+        totalAmount: 0,
+        points: baseSeries.map((point) => ({ ...point })),
+      });
+    }
+
+    const category = categoryMap.get(categoryId)!;
+    category.totalAmount += transaction.amount_cents;
+
+    const point = category.points.find((item) => item.key === monthKey);
+    if (point) {
+      point.amount += transaction.amount_cents;
+    }
+  }
+
+  const categories = [...categoryMap.values()]
+    .sort((left, right) => right.totalAmount - left.totalAmount)
+    .map(({ categoryId, categoryName, totalAmount }) => ({
+      categoryId,
+      categoryName,
+      totalAmount,
+    }));
+
+  const series = Object.fromEntries(
+    [...categoryMap.values()].map((item) => [item.categoryId, item.points]),
+  );
+
+  return {
+    success: true,
+    data: {
+      categories,
+      series,
+    },
+  };
 }
 
 export async function fetchDashboardDrilldownTransactions(params: {

@@ -20,12 +20,14 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { StatCardGrid } from "@/components/dashboard/stat-card-grid";
 import {
   fetchCategoryBreakdown,
+  fetchCategoryComparisonSeries,
   fetchCategoryTrends,
   fetchDashboardDrilldownTransactions,
   fetchDashboardStats,
   fetchMonthlyTrend,
   fetchTransactionList,
   type CategoryBreakdownItem,
+  type CategoryComparisonSeries,
   type CategoryTrendItem,
   type DashboardStats,
   type MonthlyTrendItem,
@@ -169,6 +171,13 @@ function DashboardContent() {
   const [breakdown, setBreakdown] = useState<CategoryBreakdownItem[]>([]);
   const [timeSeries, setTimeSeries] = useState<MonthlyTrendItem[]>([]);
   const [categoryTrends, setCategoryTrends] = useState<CategoryTrendItem[]>([]);
+  const [categoryComparison, setCategoryComparison] =
+    useState<CategoryComparisonSeries>({
+      categories: [],
+      series: {},
+    });
+  const [selectedComparisonCategoryId, setSelectedComparisonCategoryId] =
+    useState<string | null>(null);
   const [transactions, setTransactions] = useState<TransactionWithCategory[]>(
     [],
   );
@@ -232,12 +241,18 @@ function DashboardContent() {
               to,
               analysisMode === "custom-range" ? "auto" : "month",
             );
+      const comparisonPromise =
+        analysisMode === "multi-month-preset"
+          ? fetchCategoryComparisonSeries(from, to)
+          : null;
 
-      const [statsResult, breakdownResult, chartResult] = await Promise.all([
-        fetchDashboardStats(from, to),
-        fetchCategoryBreakdown(from, to),
-        chartPromise,
-      ]);
+      const [statsResult, breakdownResult, chartResult, comparisonResult] =
+        await Promise.all([
+          fetchDashboardStats(from, to),
+          fetchCategoryBreakdown(from, to),
+          chartPromise,
+          comparisonPromise ?? Promise.resolve(null),
+        ]);
 
       if (!statsResult.success) {
         toast("Could not load spending data. Please try refreshing.");
@@ -259,6 +274,8 @@ function DashboardContent() {
           setCategoryTrends([]);
         }
         setTimeSeries([]);
+        setCategoryComparison({ categories: [], series: {} });
+        setSelectedComparisonCategoryId(null);
       } else {
         if (chartResult.success) {
           setTimeSeries(chartResult.data as MonthlyTrendItem[]);
@@ -266,6 +283,25 @@ function DashboardContent() {
           setTimeSeries([]);
         }
         setCategoryTrends([]);
+
+        if (
+          analysisMode === "multi-month-preset" &&
+          comparisonResult &&
+          comparisonResult.success
+        ) {
+          setCategoryComparison(comparisonResult.data);
+          setSelectedComparisonCategoryId((current) =>
+            current &&
+            comparisonResult.data.categories.some(
+              (item) => item.categoryId === current,
+            )
+              ? current
+              : (comparisonResult.data.categories[0]?.categoryId ?? null),
+          );
+        } else {
+          setCategoryComparison({ categories: [], series: {} });
+          setSelectedComparisonCategoryId(null);
+        }
       }
     } catch {
       toast("Could not load spending data. Please try refreshing.");
@@ -394,6 +430,60 @@ function DashboardContent() {
     stats !== null &&
     stats.totalSpending === 0 &&
     transactionTotal === 0;
+  const chartSection = (
+    <>
+      {analysisMode === "custom-range" ? (
+        <>
+          <div className="mb-8">
+            <CategoryDonutChart
+              variant="donut"
+              data={breakdown}
+              totalSpending={stats?.totalSpending ?? 0}
+              activeCategoryId={activeCategoryId}
+              onCategoryClick={handleCategoryClick}
+            />
+          </div>
+          <div className="mb-8">
+            <MonthlyBarChart
+              variant="time-series"
+              title="Spending Over Time"
+              data={timeSeries}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {analysisMode === "multi-month-preset" ? (
+            <CategoryDonutChart
+              variant="bar"
+              comparison={categoryComparison}
+              selectedCategoryId={selectedComparisonCategoryId}
+              onCategorySelect={setSelectedComparisonCategoryId}
+            />
+          ) : (
+            <CategoryDonutChart
+              variant="donut"
+              data={breakdown}
+              totalSpending={stats?.totalSpending ?? 0}
+              activeCategoryId={activeCategoryId}
+              onCategoryClick={handleCategoryClick}
+            />
+          )}
+
+          {analysisMode === "single-month" ? (
+            <MonthlyBarChart variant="category-trends" data={categoryTrends} />
+          ) : (
+            <MonthlyBarChart
+              variant="time-series"
+              title="Monthly Spending"
+              data={timeSeries}
+              reserveTopSpace={analysisMode === "multi-month-preset"}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
 
   if (profileLoading) {
     return (
@@ -471,36 +561,7 @@ function DashboardContent() {
             />
           </div>
 
-          <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {analysisMode === "multi-month-preset" ? (
-              <CategoryDonutChart variant="bar" data={breakdown} />
-            ) : (
-              <CategoryDonutChart
-                variant="donut"
-                data={breakdown}
-                totalSpending={stats.totalSpending}
-                activeCategoryId={activeCategoryId}
-                onCategoryClick={handleCategoryClick}
-              />
-            )}
-
-            {analysisMode === "single-month" ? (
-              <MonthlyBarChart
-                variant="category-trends"
-                data={categoryTrends}
-              />
-            ) : (
-              <MonthlyBarChart
-                variant="time-series"
-                title={
-                  analysisMode === "custom-range"
-                    ? "Spending Over Time"
-                    : "Monthly Spending"
-                }
-                data={timeSeries}
-              />
-            )}
-          </div>
+          {chartSection}
 
           <RecentTransactions
             transactions={transactions}
@@ -529,19 +590,21 @@ function DashboardContent() {
           }
         }}
       >
-        <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto p-5 sm:p-6">
+        <DialogContent className="top-4 flex max-h-[calc(100vh-2rem)] max-w-4xl translate-y-0 flex-col overflow-hidden p-5 sm:top-6 sm:max-h-[calc(100vh-3rem)] sm:p-6">
           <DialogHeader>
             <DialogTitle>{modalTitle}</DialogTitle>
           </DialogHeader>
-          {drilldownLoading ? (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="h-20 w-full" />
-              ))}
-            </div>
-          ) : (
-            <ModalTransactionList transactions={drilldownTransactions} />
-          )}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {drilldownLoading ? (
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton key={index} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : (
+              <ModalTransactionList transactions={drilldownTransactions} />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

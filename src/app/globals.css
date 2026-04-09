@@ -21,11 +21,11 @@
   --heading-font-weight: 700;
   --base-font-weight: 500;
 
-  --chart-1: #FFBF00;
-  --chart-2: #0099FF;
-  --chart-3: #FF7A05;
-  --chart-4: #00D696;
-  --chart-5: #7A83FF;
+  --chart-1: #ffbf00;
+  --chart-2: #0099ff;
+  --chart-3: #ff7a05;
+  --chart-4: #00d696;
+  --chart-5: #7a83ff;
 }
 
 @theme inline {
@@ -66,6 +66,13 @@
   }
   html {
     scroll-behavior: smooth;
+  }
+
+  .recharts-wrapper:focus,
+  .recharts-wrapper:focus-visible,
+  .recharts-surface:focus,
+  .recharts-surface:focus-visible {
+    outline: none;
   }
 }
 

@@ -15,9 +15,13 @@ import {
   YAxis,
 } from "recharts";
 import type { PieSectorDataItem } from "recharts/types/polar/Pie";
-import type { CategoryBreakdownItem } from "@/app/actions/analytics-actions";
+import type {
+  CategoryBreakdownItem,
+  CategoryComparisonSeries,
+} from "@/app/actions/analytics-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/dashboard/chart-tooltip";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type CategoryDonutChartProps =
@@ -30,7 +34,9 @@ type CategoryDonutChartProps =
     }
   | {
       variant: "bar";
-      data: CategoryBreakdownItem[];
+      comparison: CategoryComparisonSeries;
+      selectedCategoryId: string | null;
+      onCategorySelect: (categoryId: string) => void;
     };
 
 const CHART_COLORS = [
@@ -76,35 +82,75 @@ function renderActiveShape(props: PieSectorDataItem) {
   );
 }
 
-function CategoryBarComparison({ data }: { data: CategoryBreakdownItem[] }) {
-  const chartData = data.slice(0, 8);
+function CategoryBarComparison({
+  comparison,
+  selectedCategoryId,
+  onCategorySelect,
+}: {
+  comparison: CategoryComparisonSeries;
+  selectedCategoryId: string | null;
+  onCategorySelect: (categoryId: string) => void;
+}) {
+  const selectedCategory =
+    comparison.categories.find(
+      (item) => item.categoryId === selectedCategoryId,
+    ) ?? comparison.categories[0];
+  const chartData = selectedCategory
+    ? (comparison.series[selectedCategory.categoryId] ?? [])
+    : [];
 
   const tooltipFormatter = useCallback(
     (value: number, _name: string, payload: Record<string, unknown>) => (
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-bold">
-          {payload.categoryName as string}
+          {selectedCategory?.categoryName ?? "Category"}
         </span>
-        <span className="text-sm font-medium">{formatCurrency(value)}</span>
-        <span className="text-sm font-medium opacity-40">
-          {payload.percentage as number}%
+        <span className="text-sm font-medium">
+          {payload.label as string}: {formatCurrency(value)}
         </span>
       </div>
     ),
-    [],
+    [selectedCategory],
   );
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
+      <div className="flex min-h-[88px] flex-wrap content-start gap-2">
+        {comparison.categories.slice(0, 8).map((category) => (
+          <Button
+            key={category.categoryId}
+            type="button"
+            size="sm"
+            variant={
+              selectedCategory?.categoryId === category.categoryId
+                ? "default"
+                : "neutral"
+            }
+            onClick={() => onCategorySelect(category.categoryId)}
+          >
+            {category.categoryName}
+          </Button>
+        ))}
+      </div>
+
       <div
         className="min-h-[320px]"
         role="img"
         aria-label="Category comparison through the selected period"
       >
         <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData} layout="vertical" margin={{ left: 12 }}>
+          <BarChart data={chartData} accessibilityLayer={false}>
             <XAxis
-              type="number"
+              dataKey="label"
+              tick={{
+                fontSize: 12,
+                fontWeight: 500,
+                fillOpacity: 0.8,
+              }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
               tickFormatter={(value) =>
                 formatCurrency(value).replace(".00", "")
               }
@@ -116,31 +162,19 @@ function CategoryBarComparison({ data }: { data: CategoryBreakdownItem[] }) {
               tickLine={false}
               axisLine={false}
             />
-            <YAxis
-              type="category"
-              dataKey="categoryName"
-              width={92}
-              tick={{
-                fontSize: 12,
-                fontWeight: 500,
-                fillOpacity: 0.8,
-              }}
-              tickLine={false}
-              axisLine={false}
-            />
             <Tooltip
               content={<ChartTooltip formatter={tooltipFormatter} />}
               cursor={false}
             />
             <Bar
               dataKey="amount"
-              radius={[0, 6, 6, 0]}
+              radius={[5, 5, 0, 0]}
               stroke="var(--border)"
               strokeWidth={2}
             >
               {chartData.map((entry, index) => (
                 <Cell
-                  key={entry.categoryId}
+                  key={entry.key}
                   fill={CHART_COLORS[index % CHART_COLORS.length]}
                 />
               ))}
@@ -148,35 +182,23 @@ function CategoryBarComparison({ data }: { data: CategoryBreakdownItem[] }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-
-      <table className="sr-only">
-        <caption>Category comparison through the selected period</caption>
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {chartData.map((entry) => (
-            <tr key={entry.categoryId}>
-              <td>{entry.categoryName}</td>
-              <td>{formatCurrency(entry.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+    </div>
   );
 }
 
 export function CategoryDonutChart(props: CategoryDonutChartProps) {
+  const isBarVariant = props.variant === "bar";
+
   const sortedData = useMemo(() => {
+    if (isBarVariant) {
+      return [];
+    }
+
     const sorted = [...props.data].sort(
       (left, right) => right.amount - left.amount,
     );
 
-    if (props.variant === "bar" || sorted.length <= 5) {
+    if (sorted.length <= 5) {
       return sorted;
     }
 
@@ -196,32 +218,7 @@ export function CategoryDonutChart(props: CategoryDonutChartProps) {
           totalAmount > 0 ? Math.round((otherAmount / totalAmount) * 100) : 0,
       },
     ];
-  }, [props]);
-
-  if (props.variant === "bar") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Category Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sortedData.length === 0 ? (
-            <div
-              className="flex min-h-[320px] items-center justify-center"
-              role="img"
-              aria-label="Category comparison"
-            >
-              <p className="text-base font-medium opacity-60">
-                No category data for this period
-              </p>
-            </div>
-          ) : (
-            <CategoryBarComparison data={sortedData} />
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
+  }, [isBarVariant, props]);
 
   const getColor = useCallback((index: number) => {
     if (index < 5) {
@@ -231,7 +228,7 @@ export function CategoryDonutChart(props: CategoryDonutChartProps) {
     return OTHER_COLOR;
   }, []);
 
-  const tooltipFormatter = useCallback(
+  const donutTooltipFormatter = useCallback(
     (value: number, _name: string, payload: Record<string, unknown>) => (
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-bold">
@@ -248,15 +245,46 @@ export function CategoryDonutChart(props: CategoryDonutChartProps) {
 
   const handleSegmentClick = useCallback(
     (categoryId: string) => {
-      if (categoryId === props.activeCategoryId) {
-        props.onCategoryClick(null);
-        return;
-      }
+      if (!isBarVariant) {
+        if (categoryId === props.activeCategoryId) {
+          props.onCategoryClick(null);
+          return;
+        }
 
-      props.onCategoryClick(categoryId);
+        props.onCategoryClick(categoryId);
+      }
     },
-    [props],
+    [isBarVariant, props],
   );
+
+  if (isBarVariant) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Category Comparison</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {props.comparison.categories.length === 0 ? (
+            <div
+              className="flex min-h-[320px] items-center justify-center"
+              role="img"
+              aria-label="Category comparison"
+            >
+              <p className="text-base font-medium opacity-60">
+                No category data for this period
+              </p>
+            </div>
+          ) : (
+            <CategoryBarComparison
+              comparison={props.comparison}
+              selectedCategoryId={props.selectedCategoryId}
+              onCategorySelect={props.onCategorySelect}
+            />
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -311,7 +339,7 @@ export function CategoryDonutChart(props: CategoryDonutChartProps) {
                   />
                 </Pie>
                 <Tooltip
-                  content={<ChartTooltip formatter={tooltipFormatter} />}
+                  content={<ChartTooltip formatter={donutTooltipFormatter} />}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -348,26 +376,6 @@ export function CategoryDonutChart(props: CategoryDonutChartProps) {
             ))}
           </div>
         </div>
-
-        <table className="sr-only">
-          <caption>Spending breakdown by category</caption>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Percentage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((entry) => (
-              <tr key={entry.categoryId}>
-                <td>{entry.categoryName}</td>
-                <td>{formatCurrency(entry.amount)}</td>
-                <td>{entry.percentage}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </CardContent>
     </Card>
   );

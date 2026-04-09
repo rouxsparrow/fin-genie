@@ -32,10 +32,7 @@ function truncate(text: string, maxLength: number): string {
 
 function toComparison(percent: number | null, label: string): ComparisonItem {
   if (percent === null) {
-    return {
-      text: `-- ${label}`,
-      direction: "neutral",
-    };
+    return null as never;
   }
 
   if (percent === 0) {
@@ -49,6 +46,22 @@ function toComparison(percent: number | null, label: string): ComparisonItem {
     text: `${Math.abs(Math.round(percent))}% ${label}`,
     direction: percent > 0 ? "up" : "down",
   };
+}
+
+function getComparisonPercent(
+  current: number,
+  previous: number | null,
+  suppliedPercent: number | null,
+) {
+  if (suppliedPercent !== null) {
+    return suppliedPercent;
+  }
+
+  if (previous === null || previous === 0) {
+    return null;
+  }
+
+  return ((current - previous) / previous) * 100;
 }
 
 function TopCategoriesList({
@@ -86,6 +99,23 @@ export function StatCardGrid({
   onLargestTransactionClick,
   onRecurringSpendClick,
 }: StatCardGridProps) {
+  const lastMonthComparison = toComparison(
+    getComparisonPercent(
+      stats.totalSpending,
+      stats.previousPeriodSpending,
+      stats.previousPeriodChange,
+    ),
+    "vs last month",
+  );
+  const yearToDateComparison = toComparison(
+    getComparisonPercent(
+      stats.totalSpending,
+      stats.sameMonthAverage,
+      stats.sameMonthAverageChange,
+    ),
+    `vs ${stats.sameMonthAverageLabel}`,
+  );
+
   if (mode === "single-month") {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -93,13 +123,11 @@ export function StatCardGrid({
           label="Total Spending"
           value={formatCurrency(stats.totalSpending)}
           valueClassName="text-[32px] font-bold tabular-nums"
-          comparison={[
-            toComparison(stats.previousPeriodChange, "vs last month"),
-            toComparison(
-              stats.sameMonthAverageChange,
-              `vs ${stats.sameMonthAverageLabel}`,
-            ),
-          ]}
+          comparison={
+            [lastMonthComparison, yearToDateComparison].filter(
+              Boolean,
+            ) as ComparisonItem[]
+          }
         />
         <StatCard
           label="Top Category"
@@ -156,20 +184,14 @@ export function StatCardGrid({
           value={formatCurrency(stats.averageMonthlyAmount)}
           comparison={[
             {
-              text: `Highest ${formatCurrency(stats.highestMonth?.amount ?? null)}`,
+              text: `Highest ${formatCurrency(stats.highestMonth?.amount ?? null)} (${stats.highestMonth?.label ?? "--"})`,
               direction: "neutral",
             },
             {
-              text: `Lowest ${formatCurrency(stats.lowestMonth?.amount ?? null)}`,
+              text: `Lowest ${formatCurrency(stats.lowestMonth?.amount ?? null)} (${stats.lowestMonth?.label ?? "--"})`,
               direction: "neutral",
             },
           ]}
-          footerContent={
-            <div className="text-sm font-medium opacity-60">
-              {stats.highestMonth?.label ?? "--"} /{" "}
-              {stats.lowestMonth?.label ?? "--"}
-            </div>
-          }
         />
         <StatCard
           label="Top 3 Categories"

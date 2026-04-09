@@ -23,6 +23,8 @@ export type DashboardAnalysisMode =
   | "custom-range";
 
 function getPresetRange(preset: Exclude<DatePreset, "custom">, now: Date) {
+  const previousMonth = subMonths(now, 1);
+
   switch (preset) {
     case "this-month":
       return {
@@ -31,13 +33,13 @@ function getPresetRange(preset: Exclude<DatePreset, "custom">, now: Date) {
       };
     case "last-3-months":
       return {
-        from: startOfMonth(subMonths(now, 2)),
-        to: endOfMonth(now),
+        from: startOfMonth(subMonths(previousMonth, 2)),
+        to: endOfMonth(previousMonth),
       };
     case "last-6-months":
       return {
-        from: startOfMonth(subMonths(now, 5)),
-        to: endOfMonth(now),
+        from: startOfMonth(subMonths(previousMonth, 5)),
+        to: endOfMonth(previousMonth),
       };
     case "this-year":
       return {
@@ -93,6 +95,14 @@ export function useDateRange() {
     });
   }
 
+  function setViewedMonth(date: Date) {
+    setParams({
+      from: format(startOfMonth(date), "yyyy-MM-dd"),
+      to: format(endOfMonth(date), "yyyy-MM-dd"),
+      preset: "this-month",
+    });
+  }
+
   function goToPreviousMonth() {
     const previousMonth = subMonths(viewedMonthStart, 1);
 
@@ -127,6 +137,7 @@ export function useDateRange() {
     canGoToNextMonth,
     setPreset,
     setCustomRange,
+    setViewedMonth,
     goToPreviousMonth,
     goToNextMonth,
   };

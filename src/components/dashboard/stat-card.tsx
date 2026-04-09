@@ -49,6 +49,7 @@ export function StatCard({
   const cardContent = (
     <Card
       className={cn(
+        "h-full",
         onClick &&
           "transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
       )}
@@ -56,7 +57,7 @@ export function StatCard({
       <CardHeader className="pb-0">
         <p className="text-sm font-medium opacity-60">{label}</p>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2 pt-0">
+      <CardContent className="flex h-full flex-1 flex-col gap-2 pt-0">
         <p className={cn("text-2xl font-bold tabular-nums", valueClassName)}>
           {value}
         </p>
@@ -98,7 +99,7 @@ export function StatCard({
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left"
+      className="h-full w-full text-left"
       aria-label={label}
     >
       {cardContent}
