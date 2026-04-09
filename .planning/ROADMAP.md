@@ -33,7 +33,7 @@ Full details archived: `.planning/milestones/v1.0-ROADMAP.md`
 
 ### Phase Details
 
-**Phase 5: Dashboard Analysis Enhancements**
+### Phase 5: Dashboard Analysis Enhancements
 Goal: Make the dashboard feel more analytical and more connected to the transaction explorer.
 Requirements: ANLC-07, ANLC-08, ANLC-09, ANLC-10
 Success criteria:
@@ -42,7 +42,7 @@ Success criteria:
 3. Dashboard widgets surface clearer breakdowns for concentration, category leaders, or merchant-level patterns in the selected range.
 4. Dashboard-driven filters stay synchronized across charts, recent transactions, and linked navigation states.
 
-**Phase 6: Transactions Exploration UX**
+### Phase 6: Transactions Exploration UX
 Goal: Help users find the transactions they want faster without losing filter context.
 Requirements: TXNS-01, TXNS-02, TXNS-03, TXNS-04
 Success criteria:
@@ -51,7 +51,7 @@ Success criteria:
 3. Loading, empty, and filtered states explain what happened and what the user can do next.
 4. Navigation from dashboard insights into transactions preserves date range and category context end-to-end.
 
-**Phase 7: Rules & Categories Management UX**
+### Phase 7: Rules & Categories Management UX
 Goal: Reduce friction and uncertainty when admins maintain categorization logic.
 Requirements: RULE-01, RULE-02, RULE-03, RULE-04, CATM-01, CATM-02, CATM-03, CATM-04
 Success criteria:
