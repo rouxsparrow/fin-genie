@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   ChevronUp,
   ChevronDown,
@@ -9,28 +9,29 @@ import {
   Trash2,
   Lock,
   Plus,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { RuleRow } from '@/components/rules/rule-row';
-import { RuleEditForm } from '@/components/rules/rule-edit-form';
-import { RecategorizeButton } from '@/components/rules/recategorize-button';
+} from "@/components/ui/table";
+import { RuleRow } from "@/components/rules/rule-row";
+import { RuleEditForm } from "@/components/rules/rule-edit-form";
+import { RecategorizeButton } from "@/components/rules/recategorize-button";
+import { RuleImportExport } from "@/components/rules/rule-import-export";
 import {
   createRule,
   updateRule,
   deleteRule,
   restoreRule,
   reorderRule,
-} from '@/app/actions/rule-actions';
-import type { Rule, Category, MatchType } from '@/lib/types/database';
+} from "@/app/actions/rule-actions";
+import type { Rule, Category, MatchType } from "@/lib/types/database";
 
 type RuleWithCategory = Rule & { categories: { name: string } };
 
@@ -41,11 +42,13 @@ interface RulesTableProps {
 
 export function RulesTable({ initialRules, categories }: RulesTableProps) {
   const [rules, setRules] = useState<RuleWithCategory[]>(initialRules);
+  const [availableCategories, setAvailableCategories] =
+    useState<Category[]>(categories);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Compute first/last user rule indices
+  const systemRules = rules.filter((rule) => rule.is_system);
   const userRules = rules.filter((r) => !r.is_system);
   const firstUserRuleId = userRules.length > 0 ? userRules[0].id : null;
   const lastUserRuleId =
@@ -65,7 +68,9 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
     setIsSaving(false);
 
     if (result.success) {
-      const category = categories.find((c) => c.id === data.categoryId);
+      const category = availableCategories.find(
+        (c) => c.id === data.categoryId,
+      );
       setRules((prev) =>
         prev.map((r) =>
           r.id === ruleId
@@ -80,7 +85,7 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
         ),
       );
       setEditingRuleId(null);
-      toast('Rule updated.');
+      toast("Rule updated.");
     } else {
       toast.error(result.error);
     }
@@ -96,14 +101,16 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
     setIsSaving(false);
 
     if (result.success) {
-      const category = categories.find((c) => c.id === data.categoryId);
+      const category = availableCategories.find(
+        (c) => c.id === data.categoryId,
+      );
       const newRule: RuleWithCategory = {
         ...result.rule,
-        categories: { name: category?.name ?? 'Unknown' },
+        categories: { name: category?.name ?? "Unknown" },
       };
       setRules((prev) => [...prev, newRule]);
       setIsAddingRule(false);
-      toast('Rule created.');
+      toast("Rule created.");
     } else {
       toast.error(result.error);
     }
@@ -117,9 +124,9 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
     const result = await deleteRule(rule.id);
 
     if (result.success) {
-      toast('Rule deleted.', {
+      toast("Rule deleted.", {
         action: {
-          label: 'Undo',
+          label: "Undo",
           onClick: async () => {
             const restoreResult = await restoreRule({
               pattern: rule.pattern,
@@ -133,11 +140,9 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
                 categories: { name: rule.categories.name },
               };
               setRules((prev) =>
-                [...prev, restored].sort(
-                  (a, b) => a.sort_order - b.sort_order,
-                ),
+                [...prev, restored].sort((a, b) => a.sort_order - b.sort_order),
               );
-              toast('Rule restored.');
+              toast("Rule restored.");
             }
           },
         },
@@ -152,13 +157,13 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
     }
   }
 
-  async function handleReorder(ruleId: string, direction: 'up' | 'down') {
+  async function handleReorder(ruleId: string, direction: "up" | "down") {
     const ruleIndex = rules.findIndex((r) => r.id === ruleId);
     if (ruleIndex === -1) return;
 
     // Find adjacent user rule
     let adjacentIndex = -1;
-    if (direction === 'up') {
+    if (direction === "up") {
       for (let i = ruleIndex - 1; i >= 0; i--) {
         if (!rules[i].is_system) {
           adjacentIndex = i;
@@ -194,8 +199,20 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
     if (!result.success) {
       // Revert on failure
       setRules(rules);
-      toast.error('Failed to reorder rule.');
+      toast.error("Failed to reorder rule.");
     }
+  }
+
+  function handleImportComplete(payload: {
+    rules: RuleWithCategory[];
+    categories: Category[];
+  }) {
+    setRules([...payload.rules].sort((a, b) => a.sort_order - b.sort_order));
+    setAvailableCategories(
+      [...payload.categories].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    setEditingRuleId(null);
+    setIsAddingRule(false);
   }
 
   return (
@@ -207,6 +224,7 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
         </p>
         <div className="flex items-center gap-2">
           <RecategorizeButton />
+          <RuleImportExport onImportComplete={handleImportComplete} />
           <Button onClick={() => setIsAddingRule(true)}>
             <Plus size={16} />
             Add Rule
@@ -217,171 +235,342 @@ export function RulesTable({ initialRules, categories }: RulesTableProps) {
       <div className="h-6" />
 
       {/* Desktop table */}
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[60px] text-center text-sm font-bold">
-                Order
-              </TableHead>
-              <TableHead className="max-w-[300px] text-sm font-bold">
-                Pattern
-              </TableHead>
-              <TableHead className="w-[100px] text-sm font-bold">
-                Match Type
-              </TableHead>
-              <TableHead className="w-[160px] text-sm font-bold">
-                Category
-              </TableHead>
-              <TableHead className="w-[140px] text-sm font-bold">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rules.map((rule) => (
-              <RuleRow
-                key={rule.id}
-                rule={rule}
-                isEditing={editingRuleId === rule.id}
-                isFirst={rule.id === firstUserRuleId}
-                isLast={rule.id === lastUserRuleId}
-                categories={categories}
-                onEdit={() => setEditingRuleId(rule.id)}
-                onCancelEdit={() => setEditingRuleId(null)}
-                onSave={(data) => handleSaveEdit(rule.id, data)}
-                onDelete={() => handleDelete(rule)}
-                onReorder={(direction) => handleReorder(rule.id, direction)}
-                isSaving={isSaving}
-              />
-            ))}
-          </TableBody>
-        </Table>
-
-        {/* Add rule form at bottom of table */}
-        {isAddingRule && (
-          <RuleEditForm
-            categories={categories}
-            onSave={handleAddRule}
-            onCancel={() => setIsAddingRule(false)}
-            isSaving={isSaving}
-          />
-        )}
-      </div>
-
-      {/* Mobile card layout */}
-      <div className="flex flex-col gap-2 md:hidden">
-        {rules.map((rule) => {
-          const isSystem = rule.is_system;
-          const isEditing = editingRuleId === rule.id;
-
-          return (
-            <Card
-              key={rule.id}
-              className={`gap-0 py-0 ${isSystem ? 'bg-background' : ''}`}
-            >
-              <CardContent
-                className={`p-4 ${isEditing ? 'opacity-40' : ''}`}
-              >
-                {/* Top row: order + pattern */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold opacity-60">
-                    #{rule.sort_order}
-                  </span>
-                  {isSystem && (
-                    <Lock size={14} className="shrink-0 opacity-40" />
-                  )}
-                  <span className="truncate font-mono text-sm font-bold">
-                    {rule.pattern}
-                  </span>
-                </div>
-
-                {/* Middle row: match type + category */}
-                <div className="mt-2 flex items-center gap-2">
-                  <Badge
-                    variant={
-                      rule.match_type === 'substring' ? 'default' : 'neutral'
-                    }
-                  >
-                    {rule.match_type === 'substring' ? 'Substring' : 'Regex'}
-                  </Badge>
-                  <span className="text-sm">{rule.categories.name}</span>
-                </div>
-
-                {/* Bottom row: actions */}
-                <div
-                  className={`mt-3 flex items-center gap-1 ${isSystem ? 'opacity-40' : ''}`}
-                >
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isSystem || rule.id === firstUserRuleId}
-                    onClick={() => handleReorder(rule.id, 'up')}
-                    aria-label="Move rule up"
-                  >
-                    <ChevronUp size={20} />
-                  </Button>
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isSystem || rule.id === lastUserRuleId}
-                    onClick={() => handleReorder(rule.id, 'down')}
-                    aria-label="Move rule down"
-                  >
-                    <ChevronDown size={20} />
-                  </Button>
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isSystem}
-                    onClick={() => setEditingRuleId(rule.id)}
-                    aria-label="Edit rule"
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className="h-8 w-8 hover:text-[#ef4444]"
-                    disabled={isSystem}
-                    onClick={() => handleDelete(rule)}
-                    aria-label="Delete rule"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </CardContent>
-
-              {/* Edit form below card content */}
-              {isEditing && (
-                <RuleEditForm
-                  initialPattern={rule.pattern}
-                  initialMatchType={rule.match_type}
-                  initialCategoryId={rule.category_id}
-                  categories={categories}
+      <div className="hidden flex-col gap-6 md:flex">
+        <section>
+          <div className="mb-3">
+            <h2 className="text-xl font-heading">System Rules</h2>
+            <p className="text-sm font-medium opacity-60">
+              Locked defaults run before user rules and cannot be edited.
+            </p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px] text-center text-sm font-bold">
+                  Order
+                </TableHead>
+                <TableHead className="max-w-[300px] text-sm font-bold">
+                  Pattern
+                </TableHead>
+                <TableHead className="w-[100px] text-sm font-bold">
+                  Match Type
+                </TableHead>
+                <TableHead className="w-[160px] text-sm font-bold">
+                  Category
+                </TableHead>
+                <TableHead className="w-[140px] text-sm font-bold">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {systemRules.map((rule) => (
+                <RuleRow
+                  key={rule.id}
+                  rule={rule}
+                  isEditing={editingRuleId === rule.id}
+                  isFirst={true}
+                  isLast={true}
+                  categories={availableCategories}
+                  existingRules={userRules}
+                  onEdit={() => setEditingRuleId(rule.id)}
+                  onCancelEdit={() => setEditingRuleId(null)}
                   onSave={(data) => handleSaveEdit(rule.id, data)}
-                  onCancel={() => setEditingRuleId(null)}
+                  onDelete={() => handleDelete(rule)}
+                  onReorder={(direction) => handleReorder(rule.id, direction)}
                   isSaving={isSaving}
                 />
-              )}
-            </Card>
-          );
-        })}
+              ))}
+            </TableBody>
+          </Table>
+        </section>
 
-        {/* Add rule form for mobile */}
-        {isAddingRule && (
-          <Card className="gap-0 py-0">
+        <section>
+          <div className="mb-3">
+            <h2 className="text-xl font-heading">User Rules</h2>
+            <p className="text-sm font-medium opacity-60">
+              User rules run top-to-bottom. First match wins.
+            </p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px] text-center text-sm font-bold">
+                  Order
+                </TableHead>
+                <TableHead className="max-w-[300px] text-sm font-bold">
+                  Pattern
+                </TableHead>
+                <TableHead className="w-[100px] text-sm font-bold">
+                  Match Type
+                </TableHead>
+                <TableHead className="w-[160px] text-sm font-bold">
+                  Category
+                </TableHead>
+                <TableHead className="w-[140px] text-sm font-bold">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {userRules.map((rule) => (
+                <RuleRow
+                  key={rule.id}
+                  rule={rule}
+                  isEditing={editingRuleId === rule.id}
+                  isFirst={rule.id === firstUserRuleId}
+                  isLast={rule.id === lastUserRuleId}
+                  categories={availableCategories}
+                  existingRules={userRules}
+                  onEdit={() => setEditingRuleId(rule.id)}
+                  onCancelEdit={() => setEditingRuleId(null)}
+                  onSave={(data) => handleSaveEdit(rule.id, data)}
+                  onDelete={() => handleDelete(rule)}
+                  onReorder={(direction) => handleReorder(rule.id, direction)}
+                  isSaving={isSaving}
+                />
+              ))}
+            </TableBody>
+          </Table>
+
+          {userRules.length === 0 && !isAddingRule && (
+            <p className="border-x-2 border-b-2 border-border px-4 py-3 text-sm font-medium opacity-60">
+              No user rules yet. Add one to customize categorization.
+            </p>
+          )}
+
+          {/* Add rule form at bottom of user table */}
+          {isAddingRule && (
             <RuleEditForm
-              categories={categories}
+              categories={availableCategories}
+              existingRules={userRules}
               onSave={handleAddRule}
               onCancel={() => setIsAddingRule(false)}
               isSaving={isSaving}
             />
-          </Card>
-        )}
+          )}
+        </section>
+      </div>
+
+      {/* Mobile card layout */}
+      <div className="flex flex-col gap-2 md:hidden">
+        <section className="flex flex-col gap-2">
+          <div>
+            <h2 className="text-xl font-heading">System Rules</h2>
+            <p className="text-sm font-medium opacity-60">
+              Locked defaults run before user rules and cannot be edited.
+            </p>
+          </div>
+          {systemRules.map((rule) => {
+            const isSystem = rule.is_system;
+            const isEditing = editingRuleId === rule.id;
+
+            return (
+              <Card
+                key={rule.id}
+                className={`gap-0 py-0 ${isSystem ? "bg-background" : ""}`}
+              >
+                <CardContent className={`p-4 ${isEditing ? "opacity-40" : ""}`}>
+                  {/* Top row: order + pattern */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold opacity-60">
+                      #{rule.sort_order}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold opacity-50">
+                      <Lock size={14} className="shrink-0" />
+                      Protected system rule
+                    </span>
+                    <span className="truncate font-mono text-sm font-bold">
+                      {rule.pattern}
+                    </span>
+                  </div>
+
+                  {/* Middle row: match type + category */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge
+                      variant={
+                        rule.match_type === "substring" ? "default" : "neutral"
+                      }
+                    >
+                      {rule.match_type === "substring" ? "Substring" : "Regex"}
+                    </Badge>
+                    <span className="text-sm">{rule.categories.name}</span>
+                  </div>
+
+                  {/* Bottom row: actions */}
+                  <div className="mt-3 flex items-center gap-1 opacity-40">
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled
+                      onClick={() => handleReorder(rule.id, "up")}
+                      aria-label="Move rule up"
+                    >
+                      <ChevronUp size={20} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled
+                      onClick={() => handleReorder(rule.id, "down")}
+                      aria-label="Move rule down"
+                    >
+                      <ChevronDown size={20} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled
+                      onClick={() => setEditingRuleId(rule.id)}
+                      aria-label="Edit rule"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8 hover:text-[#ef4444]"
+                      disabled
+                      onClick={() => handleDelete(rule)}
+                      aria-label="Delete rule"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </section>
+
+        <section className="mt-4 flex flex-col gap-2">
+          <div>
+            <h2 className="text-xl font-heading">User Rules</h2>
+            <p className="text-sm font-medium opacity-60">
+              User rules run top-to-bottom. First match wins.
+            </p>
+          </div>
+          {userRules.length === 0 && !isAddingRule && (
+            <p className="rounded-base border-2 border-border bg-background p-4 text-sm font-medium opacity-60">
+              No user rules yet. Add one to customize categorization.
+            </p>
+          )}
+          {userRules.map((rule) => {
+            const isSystem = rule.is_system;
+            const isEditing = editingRuleId === rule.id;
+
+            return (
+              <Card
+                key={rule.id}
+                className={`gap-0 py-0 ${isSystem ? "bg-background" : ""}`}
+              >
+                <CardContent className={`p-4 ${isEditing ? "opacity-40" : ""}`}>
+                  {/* Top row: order + pattern */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold opacity-60">
+                      #{rule.sort_order}
+                    </span>
+                    {isSystem && (
+                      <Lock size={14} className="shrink-0 opacity-40" />
+                    )}
+                    <span className="truncate font-mono text-sm font-bold">
+                      {rule.pattern}
+                    </span>
+                  </div>
+
+                  {/* Middle row: match type + category */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge
+                      variant={
+                        rule.match_type === "substring" ? "default" : "neutral"
+                      }
+                    >
+                      {rule.match_type === "substring" ? "Substring" : "Regex"}
+                    </Badge>
+                    <span className="text-sm">{rule.categories.name}</span>
+                  </div>
+
+                  {/* Bottom row: actions */}
+                  <div
+                    className={`mt-3 flex items-center gap-1 ${isSystem ? "opacity-40" : ""}`}
+                  >
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isSystem || rule.id === firstUserRuleId}
+                      onClick={() => handleReorder(rule.id, "up")}
+                      aria-label="Move rule up"
+                    >
+                      <ChevronUp size={20} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isSystem || rule.id === lastUserRuleId}
+                      onClick={() => handleReorder(rule.id, "down")}
+                      aria-label="Move rule down"
+                    >
+                      <ChevronDown size={20} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isSystem}
+                      onClick={() => setEditingRuleId(rule.id)}
+                      aria-label="Edit rule"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      size="icon"
+                      className="h-8 w-8 hover:text-[#ef4444]"
+                      disabled={isSystem}
+                      onClick={() => handleDelete(rule)}
+                      aria-label="Delete rule"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </CardContent>
+
+                {/* Edit form below card content */}
+                {isEditing && (
+                  <RuleEditForm
+                    initialPattern={rule.pattern}
+                    initialMatchType={rule.match_type}
+                    initialCategoryId={rule.category_id}
+                    categories={availableCategories}
+                    existingRules={userRules}
+                    currentRuleId={rule.id}
+                    onSave={(data) => handleSaveEdit(rule.id, data)}
+                    onCancel={() => setEditingRuleId(null)}
+                    isSaving={isSaving}
+                  />
+                )}
+              </Card>
+            );
+          })}
+
+          {/* Add rule form for mobile */}
+          {isAddingRule && (
+            <Card className="gap-0 py-0">
+              <RuleEditForm
+                categories={availableCategories}
+                existingRules={userRules}
+                onSave={handleAddRule}
+                onCancel={() => setIsAddingRule(false)}
+                isSaving={isSaving}
+              />
+            </Card>
+          )}
+        </section>
       </div>
 
       {/* Accessibility live region */}

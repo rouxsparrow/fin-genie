@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Check, X, Pencil, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useRef, useEffect } from "react";
+import { Check, X, Pencil, Trash2, Lock, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import type { Category } from '@/lib/types/database';
+} from "@/components/ui/tooltip";
+import type { Category } from "@/lib/types/database";
 
 interface CategoryItemProps {
   category: Category;
@@ -21,6 +21,7 @@ interface CategoryItemProps {
   onDelete: () => void;
   onToggleExclude: (excludeFromStats: boolean) => void;
   isLast: boolean;
+  serverError?: string;
 }
 
 export function CategoryItem({
@@ -32,6 +33,7 @@ export function CategoryItem({
   onDelete,
   onToggleExclude,
   isLast,
+  serverError,
 }: CategoryItemProps) {
   const [editName, setEditName] = useState(category.name);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function CategoryItem({
   function handleSave() {
     const trimmed = editName.trim();
     if (!trimmed) {
-      setError('Category name cannot be empty.');
+      setError("Category name cannot be empty.");
       return;
     }
     setError(null);
@@ -61,22 +63,25 @@ export function CategoryItem({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleSave();
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       handleCancel();
     }
   }
 
   const isSystem = category.is_system;
+  const statsStatus = category.exclude_from_stats
+    ? "Excluded from stats"
+    : "Included in stats";
 
   if (isEditing) {
     return (
       <div
-        className={`flex flex-col px-4 py-2 ${!isLast ? 'border-b-2 border-border' : ''}`}
+        className={`flex flex-col px-4 py-2 ${!isLast ? "border-b-2 border-border" : ""}`}
       >
         <div className="flex items-center gap-2">
           <Input
@@ -109,8 +114,10 @@ export function CategoryItem({
             <X size={16} />
           </Button>
         </div>
-        {error && (
-          <p className="mt-1 text-xs font-medium text-[#ef4444]">{error}</p>
+        {(error || serverError) && (
+          <p className="mt-1 text-xs font-medium text-[#ef4444]">
+            {error ?? serverError}
+          </p>
         )}
       </div>
     );
@@ -118,25 +125,24 @@ export function CategoryItem({
 
   return (
     <div
-      className={`group flex h-12 items-center px-4 ${!isLast ? 'border-b-2 border-border' : ''}`}
+      className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center ${!isLast ? "border-b-2 border-border" : ""}`}
     >
       {/* Category name */}
-      <span className="flex-grow text-base font-medium">{category.name}</span>
+      <div className="flex flex-grow flex-col gap-1">
+        <span className="text-base font-medium">{category.name}</span>
+        <span className="text-xs font-bold opacity-60">
+          {isSystem ? "Excluded from stats" : statsStatus}
+        </span>
+      </div>
 
       {/* Actions */}
       {isSystem ? (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Lock size={16} className="opacity-40" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>System categories cannot be deleted</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="inline-flex items-center gap-2 text-xs font-bold opacity-60">
+          <Lock size={16} />
+          Protected system category
+        </div>
       ) : (
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:opacity-0 max-md:opacity-100">
+        <div className="flex items-center gap-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -144,13 +150,11 @@ export function CategoryItem({
                   variant="neutral"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() =>
-                    onToggleExclude(!category.exclude_from_stats)
-                  }
+                  onClick={() => onToggleExclude(!category.exclude_from_stats)}
                   aria-label={
                     category.exclude_from_stats
-                      ? 'Include in dashboard stats'
-                      : 'Exclude from dashboard stats'
+                      ? "Include in dashboard stats"
+                      : "Exclude from dashboard stats"
                   }
                 >
                   {category.exclude_from_stats ? (
@@ -162,8 +166,8 @@ export function CategoryItem({
               </TooltipTrigger>
               <TooltipContent>
                 {category.exclude_from_stats
-                  ? 'Excluded from dashboard stats'
-                  : 'Included in dashboard stats'}
+                  ? "Excluded from dashboard stats"
+                  : "Included in dashboard stats"}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

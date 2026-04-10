@@ -1,23 +1,17 @@
-'use client';
+"use client";
 
-import {
-  ChevronUp,
-  ChevronDown,
-  Pencil,
-  Trash2,
-  Lock,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { TableRow, TableCell } from '@/components/ui/table';
+import { ChevronUp, ChevronDown, Pencil, Trash2, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { TableRow, TableCell } from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { RuleEditForm } from '@/components/rules/rule-edit-form';
-import type { Rule, Category, MatchType } from '@/lib/types/database';
+} from "@/components/ui/tooltip";
+import { RuleEditForm } from "@/components/rules/rule-edit-form";
+import type { Rule, Category, MatchType } from "@/lib/types/database";
 
 type RuleWithCategory = Rule & { categories: { name: string } };
 
@@ -27,6 +21,7 @@ interface RuleRowProps {
   isFirst: boolean;
   isLast: boolean;
   categories: Category[];
+  existingRules?: RuleWithCategory[];
   onEdit: () => void;
   onCancelEdit: () => void;
   onSave: (updated: {
@@ -35,14 +30,14 @@ interface RuleRowProps {
     categoryId: string;
   }) => void;
   onDelete: () => void;
-  onReorder: (direction: 'up' | 'down') => void;
+  onReorder: (direction: "up" | "down") => void;
   isSaving?: boolean;
 }
 
 function MatchTypeBadge({ matchType }: { matchType: MatchType }) {
   return (
-    <Badge variant={matchType === 'substring' ? 'default' : 'neutral'}>
-      {matchType === 'substring' ? 'Substring' : 'Regex'}
+    <Badge variant={matchType === "substring" ? "default" : "neutral"}>
+      {matchType === "substring" ? "Substring" : "Regex"}
     </Badge>
   );
 }
@@ -53,6 +48,7 @@ export function RuleRow({
   isFirst,
   isLast,
   categories,
+  existingRules = [],
   onEdit,
   onCancelEdit,
   onSave,
@@ -65,7 +61,7 @@ export function RuleRow({
   return (
     <>
       <TableRow
-        className={`h-12 ${isSystem ? 'bg-background' : ''} ${isEditing ? 'opacity-40' : ''}`}
+        className={`h-12 ${isSystem ? "bg-background" : ""} ${isEditing ? "opacity-40" : ""}`}
         aria-label={
           isSystem
             ? `System rule: ${rule.pattern} - cannot be edited or deleted`
@@ -79,8 +75,13 @@ export function RuleRow({
 
         {/* Pattern */}
         <TableCell className="max-w-[300px]">
-          <span className="flex items-center gap-2">
-            {isSystem && <Lock size={14} className="shrink-0 opacity-40" />}
+          <span className="flex flex-col gap-1">
+            {isSystem && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold opacity-50">
+                <Lock size={14} className="shrink-0" />
+                Protected system rule
+              </span>
+            )}
             <span className="truncate font-mono text-sm font-bold">
               {rule.pattern}
             </span>
@@ -100,7 +101,7 @@ export function RuleRow({
         {/* Actions */}
         <TableCell className="w-[140px]">
           <div
-            className={`flex items-center gap-1 ${isSystem ? 'opacity-40' : ''}`}
+            className={`flex items-center gap-1 ${isSystem ? "opacity-40" : ""}`}
           >
             <TooltipProvider>
               <Tooltip>
@@ -111,7 +112,7 @@ export function RuleRow({
                       size="icon"
                       className="h-8 w-8"
                       disabled={isSystem || isFirst}
-                      onClick={() => onReorder('up')}
+                      onClick={() => onReorder("up")}
                       aria-label="Move rule up"
                     >
                       <ChevronUp size={20} />
@@ -135,7 +136,7 @@ export function RuleRow({
                       size="icon"
                       className="h-8 w-8"
                       disabled={isSystem || isLast}
-                      onClick={() => onReorder('down')}
+                      onClick={() => onReorder("down")}
                       aria-label="Move rule down"
                     >
                       <ChevronDown size={20} />
@@ -197,6 +198,8 @@ export function RuleRow({
               initialMatchType={rule.match_type}
               initialCategoryId={rule.category_id}
               categories={categories}
+              existingRules={existingRules}
+              currentRuleId={rule.id}
               onSave={onSave}
               onCancel={onCancelEdit}
               isSaving={isSaving}

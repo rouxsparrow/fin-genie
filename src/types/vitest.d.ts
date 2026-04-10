@@ -1,5 +1,7 @@
 declare module "vitest" {
-  export const describe: any;
-  export const it: any;
-  export const expect: any;
+  export const describe: (...args: unknown[]) => void;
+  export const it: (...args: unknown[]) => void;
+  export const expect: (actual: unknown) => {
+    toBe(expected: unknown): void;
+  };
 }

@@ -1,22 +1,28 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import type { Category, MatchType } from '@/lib/types/database';
+} from "@/components/ui/select";
+import type { Category, MatchType } from "@/lib/types/database";
 
 interface RuleEditFormProps {
   initialPattern?: string;
   initialMatchType?: MatchType;
   initialCategoryId?: string;
   categories: Category[];
+  existingRules?: Array<{
+    id: string;
+    pattern: string;
+    match_type: MatchType;
+  }>;
+  currentRuleId?: string;
   onSave: (data: {
     pattern: string;
     matchType: MatchType;
@@ -27,10 +33,12 @@ interface RuleEditFormProps {
 }
 
 export function RuleEditForm({
-  initialPattern = '',
-  initialMatchType = 'substring',
-  initialCategoryId = '',
+  initialPattern = "",
+  initialMatchType = "substring",
+  initialCategoryId = "",
   categories,
+  existingRules = [],
+  currentRuleId,
   onSave,
   onCancel,
   isSaving = false,
@@ -42,21 +50,34 @@ export function RuleEditForm({
 
   function validate(): boolean {
     if (!pattern.trim()) {
-      setError('Pattern cannot be empty.');
+      setError("Pattern cannot be empty.");
       return false;
     }
 
-    if (matchType === 'regex') {
+    if (matchType === "regex") {
       try {
         new RegExp(pattern);
       } catch {
-        setError('Invalid regular expression pattern.');
+        setError("Invalid regular expression pattern.");
         return false;
       }
     }
 
+    const normalizedPattern = pattern.trim().toLowerCase();
+    const duplicate = existingRules.some(
+      (rule) =>
+        rule.id !== currentRuleId &&
+        rule.pattern.trim().toLowerCase() === normalizedPattern &&
+        rule.match_type === matchType,
+    );
+
+    if (duplicate) {
+      setError("A rule with this pattern and match type already exists.");
+      return false;
+    }
+
     if (!categoryId) {
-      setError('Please select a category.');
+      setError("Please select a category.");
       return false;
     }
 
@@ -71,11 +92,11 @@ export function RuleEditForm({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleSave();
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
     }
@@ -108,25 +129,25 @@ export function RuleEditForm({
         <div className="flex w-[140px] shrink-0">
           <button
             type="button"
-            onClick={() => setMatchType('substring')}
+            onClick={() => setMatchType("substring")}
             className={`flex-1 rounded-l-base border-2 border-border px-2 py-2 text-xs font-bold transition-colors ${
-              matchType === 'substring'
-                ? 'bg-main text-main-foreground'
-                : 'bg-secondary-background text-foreground'
+              matchType === "substring"
+                ? "bg-main text-main-foreground"
+                : "bg-secondary-background text-foreground"
             }`}
-            aria-pressed={matchType === 'substring'}
+            aria-pressed={matchType === "substring"}
           >
             Substring
           </button>
           <button
             type="button"
-            onClick={() => setMatchType('regex')}
+            onClick={() => setMatchType("regex")}
             className={`flex-1 rounded-r-base border-2 border-l-0 border-border px-2 py-2 text-xs font-bold transition-colors ${
-              matchType === 'regex'
-                ? 'bg-main text-main-foreground'
-                : 'bg-secondary-background text-foreground'
+              matchType === "regex"
+                ? "bg-main text-main-foreground"
+                : "bg-secondary-background text-foreground"
             }`}
-            aria-pressed={matchType === 'regex'}
+            aria-pressed={matchType === "regex"}
           >
             Regex
           </button>
@@ -165,7 +186,7 @@ export function RuleEditForm({
           Cancel
         </Button>
         <Button size="sm" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Saving...' : 'Save Rule'}
+          {isSaving ? "Saving..." : "Save Rule"}
         </Button>
       </div>
     </div>

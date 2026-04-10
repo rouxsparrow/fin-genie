@@ -105,19 +105,6 @@ function CategoryTrendList({ data }: { data: CategoryTrendItem[] }) {
 }
 
 export function MonthlyBarChart(props: MonthlyBarChartProps) {
-  if (props.variant === "category-trends") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Category Trends</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CategoryTrendList data={props.data} />
-        </CardContent>
-      </Card>
-    );
-  }
-
   const tooltipFormatter = useCallback(
     (value: number, _name: string, payload: Record<string, unknown>) => {
       const periodStart = payload.periodStart as string | undefined;
@@ -140,6 +127,19 @@ export function MonthlyBarChart(props: MonthlyBarChartProps) {
     },
     [],
   );
+
+  if (props.variant === "category-trends") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Category Trends</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CategoryTrendList data={props.data} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
