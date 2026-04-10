@@ -288,14 +288,16 @@ await supabase
 | A4 | Import matching should normalize case/whitespace to avoid near-duplicate categories. | Common Pitfalls | If product wants exact case-sensitive category names, planner should keep exact matching. |
 | A5 | Strongest replace safety may require a database RPC/migration for atomicity. | Common Pitfalls | If planner avoids migrations, it should at least preflight all inputs before deleting user rules. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should replace-mode import be atomic via Postgres RPC?**
+   - RESOLVED: Use the no-migration, preflight-safe implementation from 07-03.
    - What we know: Existing server actions perform sequential Supabase calls, and replace mode is destructive. [VERIFIED: codebase grep] [VERIFIED: CONTEXT.md]
    - What's unclear: Whether the phase should add a migration/RPC solely to make import replace atomic. [ASSUMED]
    - Recommendation: Planner should either schedule an RPC-backed replace action or explicitly schedule full preflight validation before any delete. [ASSUMED]
 
 2. **Should category name matching be exact or normalized?**
+   - RESOLVED: Normalize trim/lowercase for matching while preserving original display names.
    - What we know: Locked decision says match by category name, not ID. [VERIFIED: CONTEXT.md]
    - What's unclear: Whether `Food` and `food` should be treated as the same category for import. [ASSUMED]
    - Recommendation: Normalize trim/lowercase for matching, but preserve the original existing category display name. [ASSUMED]
