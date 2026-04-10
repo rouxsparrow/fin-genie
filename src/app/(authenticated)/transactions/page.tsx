@@ -1,25 +1,34 @@
-'use client';
+"use client";
 
-import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
-import { Receipt } from 'lucide-react';
-import { useQueryState, parseAsInteger, parseAsString } from 'nuqs';
-import { useDateRange } from '@/lib/hooks/use-date-range';
-import { useProfile } from '@/lib/hooks/use-profile';
-import { DateRangeSelector } from '@/components/dashboard/date-range-selector';
-import { TransactionDataTable } from '@/components/transactions/transaction-data-table';
-import { TransactionSearchBar } from '@/components/transactions/transaction-search-bar';
-import { TransactionPagination } from '@/components/transactions/transaction-pagination';
-import { TransactionListCard } from '@/components/transactions/transaction-list-card';
-import { EmptyState } from '@/components/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { Receipt } from "lucide-react";
+import { useQueryState, parseAsInteger, parseAsString } from "nuqs";
+import { useDateRange } from "@/lib/hooks/use-date-range";
+import { useProfile } from "@/lib/hooks/use-profile";
+import { DateRangeSelector } from "@/components/dashboard/date-range-selector";
+import { TransactionDataTable } from "@/components/transactions/transaction-data-table";
+import { TransactionSearchBar } from "@/components/transactions/transaction-search-bar";
+import { TransactionPagination } from "@/components/transactions/transaction-pagination";
+import { TransactionListCard } from "@/components/transactions/transaction-list-card";
+import { EmptyState } from "@/components/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchTransactionList,
   type TransactionWithCategory,
-} from '@/app/actions/analytics-actions';
-import { fetchCategories } from '@/app/actions/category-actions';
-import type { Category } from '@/lib/types/database';
+} from "@/app/actions/analytics-actions";
+import { fetchCategories } from "@/app/actions/category-actions";
+import type { Category } from "@/lib/types/database";
 
 const PAGE_SIZE = 25;
+
+function formatTotalCurrency(amountCents: number): string {
+  const formatted = new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency: "SGD",
+  }).format(Math.abs(amountCents) / 100);
+
+  return amountCents < 0 ? `(${formatted})` : formatted;
+}
 
 function TransactionsLoadingSkeleton() {
   return (
@@ -47,32 +56,30 @@ export default function TransactionsPage() {
 function TransactionsContent() {
   const { from, to } = useDateRange();
   const { profile } = useProfile();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === "admin";
 
   // URL state via nuqs
-  const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [search, setSearch] = useQueryState(
-    'search',
-    parseAsString.withDefault(''),
+    "search",
+    parseAsString.withDefault(""),
   );
   const [category, setCategory] = useQueryState(
-    'category',
-    parseAsString.withDefault(''),
+    "category",
+    parseAsString.withDefault(""),
   );
   const [sort, setSort] = useQueryState(
-    'sort',
-    parseAsString.withDefault('transaction_date'),
+    "sort",
+    parseAsString.withDefault("transaction_date"),
   );
-  const [dir, setDir] = useQueryState(
-    'dir',
-    parseAsString.withDefault('desc'),
-  );
+  const [dir, setDir] = useQueryState("dir", parseAsString.withDefault("desc"));
 
   // Data state
   const [transactions, setTransactions] = useState<TransactionWithCategory[]>(
     [],
   );
   const [total, setTotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,8 +136,8 @@ function TransactionsContent() {
         pageSize: PAGE_SIZE,
         search: debouncedSearch || undefined,
         categoryId: category || undefined,
-        sortBy: sort || 'transaction_date',
-        sortDir: (dir as 'asc' | 'desc') || 'desc',
+        sortBy: sort || "transaction_date",
+        sortDir: (dir as "asc" | "desc") || "desc",
       });
 
       if (cancelled) return;
@@ -138,6 +145,7 @@ function TransactionsContent() {
       if (result.success) {
         setTransactions(result.data.transactions);
         setTotal(result.data.total);
+        setTotalAmount(result.data.totalAmount);
         setTotalPages(result.data.totalPages);
       } else {
         setError(result.error);
@@ -157,10 +165,10 @@ function TransactionsContent() {
   const handleSort = useCallback(
     (columnId: string) => {
       if (sort === columnId) {
-        setDir(dir === 'asc' ? 'desc' : 'asc');
+        setDir(dir === "asc" ? "desc" : "asc");
       } else {
         setSort(columnId);
-        setDir('asc');
+        setDir("asc");
       }
     },
     [sort, dir, setSort, setDir],
@@ -193,8 +201,7 @@ function TransactionsContent() {
   // Determine empty state type
   const hasFiltersActive = !!(debouncedSearch || category);
   const isNoTransactionsAtAll = total === 0 && !hasFiltersActive && !loading;
-  const isNoSearchResults =
-    total === 0 && !!debouncedSearch && !loading;
+  const isNoSearchResults = total === 0 && !!debouncedSearch && !loading;
   const isNoDateRangeResults =
     total === 0 && !hasFiltersActive && !loading && !isNoTransactionsAtAll;
 
@@ -214,6 +221,17 @@ function TransactionsContent() {
         onSearchChange={handleSearchChange}
         onCategoryChange={handleCategoryChange}
       />
+
+      {!loading && total > 0 && (
+        <div className="flex justify-end">
+          <div className="text-right">
+            <p className="text-sm font-bold opacity-60">Total Amount</p>
+            <p className="text-2xl font-bold tabular-nums">
+              {formatTotalCurrency(totalAmount)}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Screen reader results count */}
       <div aria-live="polite" className="sr-only">
@@ -247,11 +265,11 @@ function TransactionsContent() {
           heading="No transactions yet"
           body={
             isAdmin
-              ? 'Import a bank statement to see your transactions here.'
-              : 'No transactions have been imported yet.'
+              ? "Import a bank statement to see your transactions here."
+              : "No transactions have been imported yet."
           }
-          ctaLabel={isAdmin ? 'Import Statement' : undefined}
-          ctaHref={isAdmin ? '/import' : undefined}
+          ctaLabel={isAdmin ? "Import Statement" : undefined}
+          ctaHref={isAdmin ? "/import" : undefined}
         />
       )}
 
@@ -276,7 +294,7 @@ function TransactionsContent() {
             <TransactionDataTable
               data={transactions}
               sortBy={sort}
-              sortDir={dir as 'asc' | 'desc'}
+              sortDir={dir as "asc" | "desc"}
               onSort={handleSort}
             />
           </div>

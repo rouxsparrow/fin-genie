@@ -113,6 +113,7 @@ export type CategoryComparisonSeries = {
 export type TransactionListResult = {
   transactions: TransactionWithCategory[];
   total: number;
+  totalAmount: number;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -1075,8 +1076,16 @@ export async function fetchTransactionList(params: {
     .gte("transaction_date", from)
     .lte("transaction_date", to);
 
+  let totalAmountQuery = supabase
+    .from("transactions")
+    .select("amount_cents, is_debit")
+    .eq("household_id", profile.household_id)
+    .gte("transaction_date", from)
+    .lte("transaction_date", to);
+
   if (spendingOnly) {
     query = query.eq("is_debit", true);
+    totalAmountQuery = totalAmountQuery.eq("is_debit", true);
   }
 
   if (excludeExcludedCategories) {
@@ -1085,14 +1094,17 @@ export async function fetchTransactionList(params: {
       profile.household_id,
     );
     query = applyExclusionFilter(query, excludedIds);
+    totalAmountQuery = applyExclusionFilter(totalAmountQuery, excludedIds);
   }
 
   if (search) {
     query = query.ilike("description", `%${search}%`);
+    totalAmountQuery = totalAmountQuery.ilike("description", `%${search}%`);
   }
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
+    totalAmountQuery = totalAmountQuery.eq("category_id", categoryId);
   }
 
   const sortColumn =
@@ -1109,18 +1121,25 @@ export async function fetchTransactionList(params: {
   query = query.range(rangeFrom, rangeTo);
 
   const { data, count, error } = await query;
+  const { data: totalAmountRows, error: totalAmountError } =
+    await totalAmountQuery;
 
-  if (error) {
+  if (error || totalAmountError) {
     return { success: false, error: "Failed to fetch transactions." };
   }
 
   const total = count ?? 0;
+  const totalAmount = (totalAmountRows ?? []).reduce((sum, transaction) => {
+    const amount = transaction.amount_cents ?? 0;
+    return sum + (transaction.is_debit ? amount : -amount);
+  }, 0);
 
   return {
     success: true,
     data: {
       transactions: (data ?? []) as TransactionWithCategory[],
       total,
+      totalAmount,
       page,
       pageSize,
       totalPages: Math.max(1, Math.ceil(total / pageSize)),

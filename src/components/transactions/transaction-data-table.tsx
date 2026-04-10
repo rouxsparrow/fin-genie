@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
-} from '@tanstack/react-table';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+} from "@tanstack/react-table";
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,16 +13,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { columns } from '@/components/transactions/columns';
-import type { TransactionWithCategory } from '@/app/actions/analytics-actions';
+} from "@/components/ui/table";
+import { columns } from "@/components/transactions/columns";
+import type { TransactionWithCategory } from "@/app/actions/analytics-actions";
 
-const SORTABLE_COLUMNS = new Set(['transaction_date', 'amount_cents']);
+const SORTABLE_COLUMNS = new Set(["transaction_date", "amount_cents"]);
 
 interface TransactionDataTableProps {
   data: TransactionWithCategory[];
   sortBy: string;
-  sortDir: 'asc' | 'desc';
+  sortDir: "asc" | "desc";
   onSort: (columnId: string) => void;
 }
 
@@ -49,42 +49,53 @@ export function TransactionDataTable({
               const isSortable = SORTABLE_COLUMNS.has(columnId);
               const isActive = sortBy === columnId;
               const ariaSortValue = isActive
-                ? sortDir === 'asc'
-                  ? 'ascending'
-                  : 'descending'
-                : 'none';
+                ? sortDir === "asc"
+                  ? "ascending"
+                  : "descending"
+                : "none";
 
               // Width classes per column
               const widthClass =
-                columnId === 'transaction_date'
-                  ? 'w-[120px]'
-                  : columnId === 'category'
-                    ? 'w-[160px]'
-                    : columnId === 'amount_cents'
-                      ? 'w-[120px] text-right'
-                      : '';
+                columnId === "transaction_date"
+                  ? "w-[120px]"
+                  : columnId === "category"
+                    ? "w-[160px]"
+                    : columnId === "amount_cents"
+                      ? "w-[120px] text-right"
+                      : "";
 
               return (
                 <TableHead
                   key={header.id}
-                  className={`text-sm font-bold ${widthClass} ${isSortable ? 'cursor-pointer select-none' : ''}`}
-                  aria-sort={isSortable ? (ariaSortValue as 'ascending' | 'descending' | 'none') : undefined}
+                  className={`text-sm font-bold ${widthClass} ${isSortable ? "cursor-pointer select-none" : ""}`}
+                  aria-sort={
+                    isSortable
+                      ? (ariaSortValue as "ascending" | "descending" | "none")
+                      : undefined
+                  }
                   onClick={isSortable ? () => onSort(columnId) : undefined}
                 >
-                  <span className="inline-flex items-center gap-1">
+                  <span
+                    className={`inline-flex items-center gap-1 ${
+                      columnId === "amount_cents" ? "justify-end" : ""
+                    }`}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
-                    {isSortable && isActive && (
-                      sortDir === 'asc' ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
+                    {isSortable &&
+                      (isActive ? (
+                        sortDir === "asc" ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )
                       ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      )
-                    )}
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+                      ))}
                   </span>
                 </TableHead>
               );
@@ -104,17 +115,13 @@ export function TransactionDataTable({
             <TableRow
               key={row.id}
               className={`h-12 ${
-                index % 2 === 0
-                  ? 'bg-secondary-background'
-                  : 'bg-background'
+                index % 2 === 0 ? "bg-secondary-background" : "bg-background"
               } hover:bg-background`}
             >
               {row.getVisibleCells().map((cell) => {
                 const columnId = cell.column.id;
                 const cellClass =
-                  columnId === 'amount_cents'
-                    ? 'text-right tabular-nums'
-                    : '';
+                  columnId === "amount_cents" ? "text-right tabular-nums" : "";
 
                 return (
                   <TableCell key={cell.id} className={cellClass}>
