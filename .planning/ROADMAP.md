@@ -61,7 +61,7 @@ Plans:
 **Requirements**: RULE-01, RULE-02, RULE-03, RULE-04, CATM-01, CATM-02, CATM-03, CATM-04
 **Plans**: 4 plans
 Plans:
-- [x] 07-01-PLAN.md — Split rules into system/user sections and improve rule form validation
+- [x] 07-01-PLAN.md — Add searchable/filterable rules list and improve rule form validation
 - [x] 07-02-PLAN.md — Make category status, protections, validation, and mobile actions explicit
 - [x] 07-03-PLAN.md — Add server-side recategorization preview/apply and user-rule JSON import/export safety
 - [x] 07-04-PLAN.md — Wire preview-first recategorization and JSON import/export into the rules UI

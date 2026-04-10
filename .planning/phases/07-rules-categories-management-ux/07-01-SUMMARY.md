@@ -5,13 +5,13 @@ subsystem: ui
 tags: [rules, react, validation]
 requires: []
 provides:
-  - Rules page System Rules and User Rules sections
+  - Rules page search and category filter controls
   - Protected system-rule text treatment
   - Duplicate user-rule validation
 affects: [rules, import-export]
 tech-stack:
   added: []
-  patterns: [sectioned admin tables, client duplicate validation]
+  patterns: [filtered admin tables, client duplicate validation]
 key-files:
   created: []
   modified:
@@ -29,11 +29,11 @@ completed: 2026-04-10
 
 # Plan 07-01 Summary
 
-**Rules management now separates protected defaults from editable user rules with explicit first-match-wins copy and pre-save duplicate validation.**
+**Rules management now uses one searchable/filterable rules list with protected system labels and pre-save duplicate validation.**
 
 ## Accomplishments
 
-- Added visible `System Rules` and `User Rules` sections on desktop and mobile.
+- Replaced the system/user section split with a unified rules list plus search and category filter controls.
 - Added `Protected system rule` text for system rows/cards while keeping match type and category visible.
 - Added duplicate pattern plus match-type validation to `RuleEditForm` using `existingRules` and `currentRuleId`.
 
@@ -50,6 +50,7 @@ completed: 2026-04-10
 ## Deviations from Plan
 
 - Combined with the other Phase 7 task work in one implementation commit to avoid creating artificial partial states across shared `RulesTable` and server-action wiring.
+- Post-completion adjustment: removed separate System/User Rules sections per user feedback and added a search bar plus category filter dropdown instead.
 
 ## User Setup Required
 
