@@ -21,17 +21,17 @@
 
 ### Rules Experience
 
-- [ ] **RULE-01**: Admin can scan rules more easily with clearer hierarchy, system-rule treatment, and category visibility.
-- [ ] **RULE-02**: Admin can create or edit rules with less friction and better validation feedback before saving.
-- [ ] **RULE-03**: Admin can understand the impact of rule ordering and recategorization before committing a broad rules change.
-- [ ] **RULE-04**: Admin can complete common rule-management actions on desktop and mobile without losing context.
+- [x] **RULE-01**: Admin can scan rules more easily with clearer hierarchy, system-rule treatment, and category visibility.
+- [x] **RULE-02**: Admin can create or edit rules with less friction and better validation feedback before saving.
+- [x] **RULE-03**: Admin can understand the impact of rule ordering and recategorization before committing a broad rules change.
+- [x] **RULE-04**: Admin can complete common rule-management actions on desktop and mobile without losing context.
 
 ### Category Management
 
-- [ ] **CATM-01**: Admin can scan categories more easily with clearer status for system categories and dashboard inclusion.
-- [ ] **CATM-02**: Admin can create, rename, and maintain categories with immediate validation and helpful empty/error states.
-- [ ] **CATM-03**: Admin can understand which categories are excluded from dashboard stats and change that setting confidently.
-- [ ] **CATM-04**: Admin can manage categories on smaller screens without losing essential controls or explanations.
+- [x] **CATM-01**: Admin can scan categories more easily with clearer status for system categories and dashboard inclusion.
+- [x] **CATM-02**: Admin can create, rename, and maintain categories with immediate validation and helpful empty/error states.
+- [x] **CATM-03**: Admin can understand which categories are excluded from dashboard stats and change that setting confidently.
+- [x] **CATM-04**: Admin can manage categories on smaller screens without losing essential controls or explanations.
 
 ## Future Requirements
 
@@ -71,14 +71,14 @@
 | TXNS-02 | Phase 6 | Pending |
 | TXNS-03 | Phase 6 | Pending |
 | TXNS-04 | Phase 6 | Pending |
-| RULE-01 | Phase 7 | Pending |
-| RULE-02 | Phase 7 | Pending |
-| RULE-03 | Phase 7 | Pending |
-| RULE-04 | Phase 7 | Pending |
-| CATM-01 | Phase 7 | Pending |
-| CATM-02 | Phase 7 | Pending |
-| CATM-03 | Phase 7 | Pending |
-| CATM-04 | Phase 7 | Pending |
+| RULE-01 | Phase 7 | Complete |
+| RULE-02 | Phase 7 | Complete |
+| RULE-03 | Phase 7 | Complete |
+| RULE-04 | Phase 7 | Complete |
+| CATM-01 | Phase 7 | Complete |
+| CATM-02 | Phase 7 | Complete |
+| CATM-03 | Phase 7 | Complete |
+| CATM-04 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 16 total

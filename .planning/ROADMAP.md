@@ -61,10 +61,10 @@ Plans:
 **Requirements**: RULE-01, RULE-02, RULE-03, RULE-04, CATM-01, CATM-02, CATM-03, CATM-04
 **Plans**: 4 plans
 Plans:
-- [ ] 07-01-PLAN.md — Split rules into system/user sections and improve rule form validation
-- [ ] 07-02-PLAN.md — Make category status, protections, validation, and mobile actions explicit
-- [ ] 07-03-PLAN.md — Add server-side recategorization preview/apply and user-rule JSON import/export safety
-- [ ] 07-04-PLAN.md — Wire preview-first recategorization and JSON import/export into the rules UI
+- [x] 07-01-PLAN.md — Split rules into system/user sections and improve rule form validation
+- [x] 07-02-PLAN.md — Make category status, protections, validation, and mobile actions explicit
+- [x] 07-03-PLAN.md — Add server-side recategorization preview/apply and user-rule JSON import/export safety
+- [x] 07-04-PLAN.md — Wire preview-first recategorization and JSON import/export into the rules UI
 **Success Criteria** (what must be TRUE):
 1. Admins can scan rule order, category assignments, and system-rule boundaries more easily on desktop and mobile.
 2. Rule and category forms provide better validation and lower-friction create/edit flows.
@@ -82,4 +82,4 @@ Plans:
 | 4. Dashboard & Analytics | v1.0 | 3/3 | Complete | 2026-04-08 |
 | 5. Dashboard Analysis Enhancements | v1.1 | 3/3 | Complete | 2026-04-09 |
 | 6. Transactions Exploration UX | v1.1 | 0/0 | Pending | — |
-| 7. Rules & Categories Management UX | v1.1 | 0/4 | Pending | — |
+| 7. Rules & Categories Management UX | v1.1 | 4/4 | Complete | 2026-04-10 |
