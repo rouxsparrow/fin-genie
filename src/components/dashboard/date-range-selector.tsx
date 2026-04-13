@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { format, parseISO, setMonth, setYear } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
@@ -30,7 +31,21 @@ const monthOptions = Array.from({ length: 12 }).map((_, index) => ({
   label: format(setMonth(new Date(), index), "MMM"),
 }));
 
-export function DateRangeSelector() {
+interface DateRangeSelectorProps {
+  loading?: boolean;
+}
+
+type PendingAction =
+  | "previous-month"
+  | "next-month"
+  | "viewed-month"
+  | DatePreset
+  | "custom"
+  | null;
+
+export function DateRangeSelector({
+  loading = false,
+}: DateRangeSelectorProps = {}) {
   const {
     from,
     to,
@@ -48,7 +63,9 @@ export function DateRangeSelector() {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [customRange, setCustomRangeState] = useState<DateRange | undefined>();
-  const [pickerYear, setPickerYear] = useState(viewedMonthStart.getFullYear());
+  const viewedMonthYear = viewedMonthStart.getFullYear();
+  const [pickerYear, setPickerYear] = useState(viewedMonthYear);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   useEffect(() => {
     if (preset === "custom") {
@@ -60,10 +77,17 @@ export function DateRangeSelector() {
   }, [from, to, preset]);
 
   useEffect(() => {
-    setPickerYear(viewedMonthStart.getFullYear());
-  }, [viewedMonthStart.getFullYear()]);
+    setPickerYear(viewedMonthYear);
+  }, [viewedMonthYear]);
+
+  useEffect(() => {
+    if (!loading) {
+      setPendingAction(null);
+    }
+  }, [loading]);
 
   function handlePresetClick(presetValue: DatePreset) {
+    setPendingAction(presetValue);
     setPreset(presetValue);
   }
 
@@ -71,6 +95,7 @@ export function DateRangeSelector() {
     setCustomRangeState(range);
 
     if (range?.from && range.to) {
+      setPendingAction("custom");
       setCustomRange(range.from, range.to);
       setPopoverOpen(false);
     }
@@ -85,6 +110,7 @@ export function DateRangeSelector() {
       return;
     }
 
+    setPendingAction("viewed-month");
     setViewedMonth(date);
     setMonthPickerOpen(false);
   }
@@ -99,6 +125,15 @@ export function DateRangeSelector() {
       ? `${format(parseISO(from), "MMM d")} - ${format(parseISO(to), "MMM d")}`
       : "Custom";
 
+  function getLoadingText(label: ReactNode) {
+    return (
+      <>
+        <span className="sr-only">Loading</span>
+        <span>{label}</span>
+      </>
+    );
+  }
+
   return (
     <div
       role="group"
@@ -109,9 +144,14 @@ export function DateRangeSelector() {
         <Button
           size="icon"
           variant={preset === "this-month" ? "default" : "neutral"}
-          onClick={goToPreviousMonth}
+          onClick={() => {
+            setPendingAction("previous-month");
+            goToPreviousMonth();
+          }}
+          loading={loading && pendingAction === "previous-month"}
           aria-label="Go to previous month"
           className="size-9"
+          disabled={loading}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -122,6 +162,9 @@ export function DateRangeSelector() {
               variant={preset === "this-month" ? "default" : "neutral"}
               aria-pressed={preset === "this-month"}
               className="min-w-[96px]"
+              loading={loading && pendingAction === "viewed-month"}
+              loadingText={getLoadingText(viewedMonthLabel)}
+              disabled={loading}
             >
               {viewedMonthLabel}
             </Button>
@@ -192,8 +235,12 @@ export function DateRangeSelector() {
         <Button
           size="icon"
           variant={preset === "this-month" ? "default" : "neutral"}
-          onClick={goToNextMonth}
-          disabled={!canGoToNextMonth}
+          onClick={() => {
+            setPendingAction("next-month");
+            goToNextMonth();
+          }}
+          loading={loading && pendingAction === "next-month"}
+          disabled={loading || !canGoToNextMonth}
           aria-disabled={!canGoToNextMonth}
           aria-label="Go to next month"
           className="size-9"
@@ -209,6 +256,9 @@ export function DateRangeSelector() {
           variant={preset === item.value ? "default" : "neutral"}
           aria-pressed={preset === item.value}
           onClick={() => handlePresetClick(item.value)}
+          loading={loading && pendingAction === item.value}
+          loadingText={getLoadingText(item.label)}
+          disabled={loading}
         >
           {item.label}
         </Button>
@@ -221,6 +271,9 @@ export function DateRangeSelector() {
             variant={preset === "custom" ? "default" : "neutral"}
             aria-pressed={preset === "custom"}
             className="min-w-[160px]"
+            loading={loading && pendingAction === "custom"}
+            loadingText={getLoadingText(customLabel)}
+            disabled={loading}
           >
             <CalendarIcon className="mr-1 h-3.5 w-3.5" />
             {customLabel}

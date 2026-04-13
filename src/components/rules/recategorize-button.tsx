@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,15 +67,13 @@ export function RecategorizeButton() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button onClick={handlePreview} disabled={isPreviewing}>
-        {isPreviewing ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Previewing...
-          </>
-        ) : (
-          "Preview Re-categorization"
-        )}
+      <Button
+        onClick={handlePreview}
+        disabled={isPreviewing}
+        loading={isPreviewing}
+        loadingText="Previewing Re-categorization"
+      >
+        Preview Re-categorization
       </Button>
 
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
@@ -129,15 +126,10 @@ export function RecategorizeButton() {
           <Button
             onClick={handleApply}
             disabled={isApplying || !preview || preview.changed === 0}
+            loading={isApplying}
+            loadingText="Applying Re-categorization"
           >
-            {isApplying ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Applying...
-              </>
-            ) : (
-              "Apply Re-categorization"
-            )}
+            Apply Re-categorization
           </Button>
         </DialogFooter>
       </DialogContent>

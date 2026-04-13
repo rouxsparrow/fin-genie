@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import {
   parseISO,
   startOfMonth,
-  endOfMonth,
   eachMonthOfInterval,
   format,
   isBefore,

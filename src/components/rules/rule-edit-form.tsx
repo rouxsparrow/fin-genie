@@ -185,8 +185,14 @@ export function RuleEditForm({
         >
           Cancel
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Rule"}
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={isSaving}
+          loading={isSaving}
+          loadingText="Saving Rule"
+        >
+          Save Rule
         </Button>
       </div>
     </div>

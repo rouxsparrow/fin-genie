@@ -22,6 +22,8 @@ interface CategoryItemProps {
   onToggleExclude: (excludeFromStats: boolean) => void;
   isLast: boolean;
   serverError?: string;
+  isSaving?: boolean;
+  isToggling?: boolean;
 }
 
 export function CategoryItem({
@@ -34,6 +36,8 @@ export function CategoryItem({
   onToggleExclude,
   isLast,
   serverError,
+  isSaving = false,
+  isToggling = false,
 }: CategoryItemProps) {
   const [editName, setEditName] = useState(category.name);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +105,8 @@ export function CategoryItem({
             className="h-8 w-8"
             onClick={handleSave}
             aria-label="Save category"
+            disabled={isSaving}
+            loading={isSaving}
           >
             <Check size={16} />
           </Button>
@@ -110,6 +116,7 @@ export function CategoryItem({
             className="h-8 w-8"
             onClick={handleCancel}
             aria-label="Cancel editing"
+            disabled={isSaving}
           >
             <X size={16} />
           </Button>
@@ -156,6 +163,8 @@ export function CategoryItem({
                       ? "Include in dashboard stats"
                       : "Exclude from dashboard stats"
                   }
+                  disabled={isToggling}
+                  loading={isToggling}
                 >
                   {category.exclude_from_stats ? (
                     <EyeOff size={16} />
@@ -177,6 +186,7 @@ export function CategoryItem({
             className="h-8 w-8"
             onClick={onEdit}
             aria-label="Edit category"
+            disabled={isToggling}
           >
             <Pencil size={16} />
           </Button>
@@ -186,6 +196,7 @@ export function CategoryItem({
             className="h-8 w-8 hover:text-[#ef4444]"
             onClick={onDelete}
             aria-label="Delete category"
+            disabled={isToggling}
           >
             <Trash2 size={16} />
           </Button>

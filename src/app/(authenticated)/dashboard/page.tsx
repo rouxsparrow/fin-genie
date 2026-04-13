@@ -499,7 +499,7 @@ function DashboardContent() {
       <div>
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <DateRangeSelector />
+          <DateRangeSelector loading={transitioning} />
         </div>
         {profile?.role === "admin" ? (
           <EmptyState
@@ -524,10 +524,10 @@ function DashboardContent() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <DateRangeSelector />
-      </div>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <DateRangeSelector loading={transitioning} />
+        </div>
 
       {analyticsLoading || !stats ? (
         <DashboardSkeleton />
@@ -573,6 +573,7 @@ function DashboardContent() {
             sortBy={sort}
             sortDir={(dir as "asc" | "desc") || "desc"}
             loading={transactionsLoading}
+            paginationLoading={transactionsLoading}
             categoryName={activeCategoryName}
             onSearchChange={(value) => setSearch(value || null)}
             onSort={handleSort}

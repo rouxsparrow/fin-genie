@@ -158,8 +158,14 @@ export function AddUserForm() {
             </Select>
           </div>
 
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? 'Creating...' : 'Create Account'}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full"
+            loading={isPending}
+            loadingText="Creating Account"
+          >
+            Create Account
           </Button>
         </form>
       </DialogContent>

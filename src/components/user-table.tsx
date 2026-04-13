@@ -38,6 +38,7 @@ interface UserTableProps {
 
 export function UserTable({ profiles, currentUserId }: UserTableProps) {
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null);
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const otherProfiles = profiles.filter((p) => p.id !== currentUserId);
@@ -63,6 +64,7 @@ export function UserTable({ profiles, currentUserId }: UserTableProps) {
     if (!removeTarget) return;
 
     const target = removeTarget;
+    setPendingRemovalId(target.id);
     startTransition(async () => {
       const result = await removeUser({ userId: target.id });
 
@@ -72,6 +74,7 @@ export function UserTable({ profiles, currentUserId }: UserTableProps) {
         toast.success(`${target.full_name} has been removed.`);
       }
       setRemoveTarget(null);
+      setPendingRemovalId(null);
     });
   }
 
@@ -237,6 +240,8 @@ export function UserTable({ profiles, currentUserId }: UserTableProps) {
               className="text-red-500 hover:bg-red-500 hover:text-white"
               onClick={handleRemoveConfirm}
               disabled={isPending}
+              loading={isPending && pendingRemovalId === removeTarget?.id}
+              loadingText="Removing Member"
             >
               Remove Member
             </Button>

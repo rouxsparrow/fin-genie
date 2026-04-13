@@ -23,11 +23,16 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isAddingPending, setIsAddingPending] = useState(false);
   const [newName, setNewName] = useState("");
   const [newNameError, setNewNameError] = useState<string | null>(null);
   const [categoryErrors, setCategoryErrors] = useState<Record<string, string>>(
     {},
   );
+  const [pendingCategoryAction, setPendingCategoryAction] = useState<{
+    id: string;
+    type: "save" | "toggle";
+  } | null>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -55,7 +60,9 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
       delete next[categoryId];
       return next;
     });
+    setPendingCategoryAction({ id: categoryId, type: "save" });
     const result = await updateCategory({ id: categoryId, name });
+    setPendingCategoryAction(null);
 
     if (result.success) {
       setCategories((prev) =>
@@ -81,6 +88,7 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
     categoryId: string,
     excludeFromStats: boolean,
   ) {
+    setPendingCategoryAction({ id: categoryId, type: "toggle" });
     // Optimistic update
     setCategories((prev) =>
       prev.map((c) =>
@@ -94,6 +102,7 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
       id: categoryId,
       excludeFromStats,
     });
+    setPendingCategoryAction(null);
 
     if (result.success) {
       const name = categories.find((c) => c.id === categoryId)?.name ?? "";
@@ -177,7 +186,9 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
 
     setNewNameError(null);
 
+    setIsAddingPending(true);
     const result = await createCategory({ name: trimmed });
+    setIsAddingPending(false);
 
     if (result.success) {
       setCategories((prev) =>
@@ -239,6 +250,14 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
           }
           isLast={!isAdding && index === categories.length - 1}
           serverError={categoryErrors[category.id]}
+          isSaving={
+            pendingCategoryAction?.id === category.id &&
+            pendingCategoryAction.type === "save"
+          }
+          isToggling={
+            pendingCategoryAction?.id === category.id &&
+            pendingCategoryAction.type === "toggle"
+          }
         />
       ))}
 
@@ -264,6 +283,8 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
               className="h-8 w-8"
               onClick={handleAddCategory}
               aria-label="Save new category"
+              disabled={isAddingPending}
+              loading={isAddingPending}
             >
               <Check size={16} />
             </Button>
@@ -277,6 +298,7 @@ export function CategoriesList({ initialCategories }: CategoriesListProps) {
                 setNewNameError(null);
               }}
               aria-label="Cancel adding category"
+              disabled={isAddingPending}
             >
               <X size={16} />
             </Button>

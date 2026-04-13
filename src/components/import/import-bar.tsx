@@ -1,6 +1,5 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ImportBarProps {
@@ -43,6 +42,8 @@ export function ImportBar({
           <Button
             onClick={onImport}
             disabled={!allCategorized || totalCount === 0 || isImporting}
+            loading={isImporting}
+            loadingText={`Importing ${totalCount} Transactions`}
             className={
               !allCategorized
                 ? 'cursor-not-allowed opacity-50 shadow-none'
@@ -52,12 +53,7 @@ export function ImportBar({
               !allCategorized ? 'import-disabled-reason' : undefined
             }
           >
-            {isImporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : allCategorized ? (
+            {allCategorized ? (
               `Import ${totalCount} Transactions`
             ) : (
               'Import Transactions'

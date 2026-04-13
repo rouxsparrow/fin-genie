@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LoginForm() {
@@ -16,7 +15,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,12 +44,13 @@ export function LoginForm() {
     }
 
     setError(null);
+    setResetLoading(true);
     const supabase = createClient();
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/auth/callback',
     });
 
-    setResetSent(true);
+    setResetLoading(false);
     toast('Check your email for a password reset link.');
   }
 
@@ -88,12 +88,10 @@ export function LoginForm() {
             type="submit"
             className="w-full mt-4"
             disabled={loading}
+            loading={loading}
+            loadingText="Log In"
           >
-            {loading ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              'Log In'
-            )}
+            Log In
           </Button>
 
           {error && (
@@ -102,13 +100,17 @@ export function LoginForm() {
             </p>
           )}
 
-          <button
+          <Button
             type="button"
+            variant="neutral"
             onClick={handleForgotPassword}
-            className="text-[14px] underline text-center mt-4 hover:opacity-70 transition-opacity"
+            className="w-full mt-4 text-[14px]"
+            disabled={loading || resetLoading}
+            loading={resetLoading}
+            loadingText="Sending Reset Link"
           >
             Forgot your password?
-          </button>
+          </Button>
         </form>
       </CardContent>
     </Card>

@@ -25,6 +25,7 @@ interface RecentTransactionsProps {
   onSort: (columnId: string) => void;
   onPageChange: (page: number) => void;
   onClearFilter: () => void;
+  paginationLoading?: boolean;
 }
 
 export function RecentTransactions({
@@ -42,6 +43,7 @@ export function RecentTransactions({
   onSort,
   onPageChange,
   onClearFilter,
+  paginationLoading = false,
 }: RecentTransactionsProps) {
   return (
     <Card>
@@ -106,6 +108,7 @@ export function RecentTransactions({
               totalPages={totalPages}
               total={total}
               pageSize={pageSize}
+              loading={paginationLoading}
               onPageChange={onPageChange}
             />
           </>

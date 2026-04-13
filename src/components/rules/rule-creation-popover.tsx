@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
 // PopoverContent no longer used — parent handles positioning
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -280,12 +279,10 @@ export function RuleCreationPopover({
                 disabled={
                   isCreatingCat || !newCategoryName.trim()
                 }
+                loading={isCreatingCat}
+                loadingText="Creating"
               >
-                {isCreatingCat ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  'Create'
-                )}
+                Create
               </Button>
             </div>
           )}
@@ -311,15 +308,10 @@ export function RuleCreationPopover({
             size="sm"
             onClick={handleSave}
             disabled={isSaving}
+            loading={isSaving}
+            loadingText="Saving Rule"
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Rule'
-            )}
+            Save Rule
           </Button>
         </div>
       </div>

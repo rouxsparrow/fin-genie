@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, Loader2, Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,12 +105,14 @@ export function RuleImportExport({ onImportComplete }: RuleImportExportProps) {
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="neutral" onClick={handleExport} disabled={isExporting}>
-          {isExporting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Download size={16} />
-          )}
+        <Button
+          variant="neutral"
+          onClick={handleExport}
+          disabled={isExporting}
+          loading={isExporting}
+          loadingText="Exporting JSON"
+        >
+          {!isExporting && <Download size={16} />}
           Export JSON
         </Button>
         <Button
@@ -166,15 +168,10 @@ export function RuleImportExport({ onImportComplete }: RuleImportExportProps) {
               disabled={
                 isImporting || confirmation !== REPLACE_RULES_CONFIRMATION
               }
+              loading={isImporting}
+              loadingText="Importing Rules"
             >
-              {isImporting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                "Replace User Rules"
-              )}
+              Replace User Rules
             </Button>
           </DialogFooter>
         </DialogContent>

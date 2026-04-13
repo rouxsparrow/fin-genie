@@ -210,7 +210,7 @@ function TransactionsContent() {
       {/* Page header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl font-bold">Transactions</h1>
-        <DateRangeSelector />
+        <DateRangeSelector loading={loading} />
       </div>
 
       {/* Search and filter bar */}
@@ -312,6 +312,7 @@ function TransactionsContent() {
             totalPages={totalPages}
             total={total}
             pageSize={PAGE_SIZE}
+            loading={loading}
             onPageChange={handlePageChange}
           />
         </>
