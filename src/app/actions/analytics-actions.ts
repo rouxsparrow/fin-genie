@@ -143,6 +143,8 @@ const transactionListSchema = z.object({
   pageSize: z.number().int().min(1).max(100).default(25),
   search: z.string().optional(),
   categoryId: z.string().uuid().optional(),
+  excludeCategoryIds: z.array(z.string().uuid()).optional(),
+  excludeUncategorized: z.boolean().optional(),
   sortBy: z
     .enum(["transaction_date", "amount_cents", "description"])
     .optional(),
@@ -210,6 +212,30 @@ function applyExclusionFilter<T>(query: T, excludedIds: string[]): T {
     "in",
     `(${excludedIds.join(",")})`,
   ) as T;
+}
+
+function applySyntheticCategoryFilter<T>(
+  query: T,
+  excludeCategoryIds: string[],
+  excludeUncategorized: boolean,
+): T {
+  let nextQuery = query;
+
+  if (excludeCategoryIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    nextQuery = (nextQuery as any).not(
+      "category_id",
+      "in",
+      `(${excludeCategoryIds.join(",")})`,
+    ) as T;
+  }
+
+  if (excludeUncategorized) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    nextQuery = (nextQuery as any).not("category_id", "is", null) as T;
+  }
+
+  return nextQuery;
 }
 
 function isWholeMonthRange(fromDate: Date, toDate: Date) {
@@ -1035,6 +1061,8 @@ export async function fetchTransactionList(params: {
   pageSize: number;
   search?: string;
   categoryId?: string;
+  excludeCategoryIds?: string[];
+  excludeUncategorized?: boolean;
   sortBy?: string;
   sortDir?: "asc" | "desc";
   spendingOnly?: boolean;
@@ -1061,11 +1089,23 @@ export async function fetchTransactionList(params: {
     pageSize,
     search,
     categoryId,
+    excludeCategoryIds = [],
+    excludeUncategorized = false,
     sortBy,
     sortDir,
     spendingOnly,
     excludeExcludedCategories,
   } = parsed.data;
+
+  if (
+    categoryId &&
+    (excludeCategoryIds.length > 0 || excludeUncategorized)
+  ) {
+    return {
+      success: false,
+      error: "Cannot combine category and synthetic category filters",
+    };
+  }
 
   let query = supabase
     .from("transactions")
@@ -1105,6 +1145,17 @@ export async function fetchTransactionList(params: {
   if (categoryId) {
     query = query.eq("category_id", categoryId);
     totalAmountQuery = totalAmountQuery.eq("category_id", categoryId);
+  } else if (excludeCategoryIds.length > 0 || excludeUncategorized) {
+    query = applySyntheticCategoryFilter(
+      query,
+      excludeCategoryIds,
+      excludeUncategorized,
+    );
+    totalAmountQuery = applySyntheticCategoryFilter(
+      totalAmountQuery,
+      excludeCategoryIds,
+      excludeUncategorized,
+    );
   }
 
   const sortColumn =

@@ -46,6 +46,7 @@ import { useDateRange } from "@/lib/hooks/use-date-range";
 import { useProfile } from "@/lib/hooks/use-profile";
 
 const PAGE_SIZE = 10;
+const OTHER_CATEGORY_ID = "__other__";
 
 type DrilldownType =
   | "top-category"
@@ -216,12 +217,44 @@ function DashboardContent() {
     setPage(1);
   }, [from, to, activeCategoryId, debouncedSearch, sort, dir, setPage]);
 
+  const syntheticOtherFilter = useMemo(() => {
+    if (activeCategoryId !== OTHER_CATEGORY_ID) {
+      return null;
+    }
+
+    const sorted = [...breakdown].sort((left, right) => right.amount - left.amount);
+
+    if (sorted.length <= 5) {
+      return null;
+    }
+
+    const visibleSlices = sorted.slice(0, 5);
+
+    return {
+      excludeCategoryIds: visibleSlices
+        .map((item) => item.categoryId)
+        .filter((id) => id !== "uncategorized"),
+      excludeUncategorized: visibleSlices.some(
+        (item) => item.categoryId === "uncategorized",
+      ),
+    };
+  }, [activeCategoryId, breakdown]);
+
   const activeCategoryName = useMemo(
-    () =>
-      activeCategoryId
-        ? (breakdown.find((item) => item.categoryId === activeCategoryId)
-            ?.categoryName ?? null)
-        : null,
+    () => {
+      if (!activeCategoryId) {
+        return null;
+      }
+
+      if (activeCategoryId === OTHER_CATEGORY_ID) {
+        return "Other Categories";
+      }
+
+      return (
+        breakdown.find((item) => item.categoryId === activeCategoryId)
+          ?.categoryName ?? null
+      );
+    },
     [activeCategoryId, breakdown],
   );
 
@@ -322,7 +355,12 @@ function DashboardContent() {
         page,
         pageSize: PAGE_SIZE,
         search: debouncedSearch || undefined,
-        categoryId: activeCategoryId ?? undefined,
+        categoryId:
+          activeCategoryId && activeCategoryId !== OTHER_CATEGORY_ID
+            ? activeCategoryId
+            : undefined,
+        excludeCategoryIds: syntheticOtherFilter?.excludeCategoryIds,
+        excludeUncategorized: syntheticOtherFilter?.excludeUncategorized,
         sortBy: sort || "transaction_date",
         sortDir: (dir as "asc" | "desc") || "desc",
         spendingOnly: true,
@@ -342,7 +380,7 @@ function DashboardContent() {
     } finally {
       setTransactionsLoading(false);
     }
-  }, [activeCategoryId, debouncedSearch, dir, from, page, sort, to]);
+  }, [activeCategoryId, debouncedSearch, dir, from, page, sort, syntheticOtherFilter, to]);
 
   useEffect(() => {
     loadAnalytics();
