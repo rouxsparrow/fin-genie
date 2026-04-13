@@ -1,4 +1,3 @@
-import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2 } from "lucide-react"
 
@@ -49,23 +48,46 @@ function Button({
     loading?: boolean
     loadingText?: React.ReactNode
   }) {
-  const Comp = asChild ? Slot : "button"
   const isDisabled = disabled || loading
   const content = loading
     ? (loadingText ?? (size === "icon" ? null : children))
     : children
+  const classNames = cn(buttonVariants({ variant, size, className }))
+
+  if (asChild && React.isValidElement(children)) {
+    const child = children as React.ReactElement<{
+      className?: string
+      children?: React.ReactNode
+    }>
+    const childProps = child.props
+
+    return React.cloneElement(child, {
+      ...props,
+      className: cn(classNames, childProps.className),
+      "data-slot": "button",
+      "aria-disabled": isDisabled,
+      children: (
+        <>
+          {loading ? (
+            <Loader2 className="animate-spin" aria-hidden="true" />
+          ) : null}
+          {content}
+        </>
+      ),
+    } as Record<string, unknown>)
+  }
 
   return (
-    <Comp
+    <button
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      disabled={asChild ? undefined : isDisabled}
+      className={classNames}
+      disabled={isDisabled}
       aria-disabled={isDisabled}
       {...props}
     >
       {loading ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
       {content}
-    </Comp>
+    </button>
   )
 }
 
